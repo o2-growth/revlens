@@ -6,7 +6,7 @@ import { CallLogRow } from "@/components/CallLogRow";
 import { Kbd } from "@/components/Kbd";
 import { calls, type Call } from "@/lib/mock/calls";
 
-type ViewKey = "todas" | "risco" | "sinais" | "forecast" | "processando";
+type ViewKey = "todas" | "risco" | "sinais" | "forecast" | "ganhas" | "perdidas" | "processando";
 
 const VIEWS: { key: ViewKey; label: string; test: (c: Call) => boolean }[] = [
   { key: "todas", label: "Todas", test: () => true },
@@ -17,6 +17,8 @@ const VIEWS: { key: ViewKey; label: string; test: (c: Call) => boolean }[] = [
     label: "Forecast escorregando",
     test: (c) => c.signal === "risco" && (c.dealValue ?? 0) >= 350000,
   },
+  { key: "ganhas", label: "Ganhas", test: (c) => c.outcome === "ganho" },
+  { key: "perdidas", label: "Perdidas", test: (c) => c.outcome === "perdido" },
   { key: "processando", label: "Processando", test: (c) => c.status === "processando" },
 ];
 

@@ -6,6 +6,7 @@ import { VitalsReadout } from "@/components/VitalsReadout";
 import { VitalsSkeleton, PulseSkeleton } from "@/components/CallSkeleton";
 import { SpeakerTurn } from "@/components/SpeakerTurn";
 import { EvidenceChip } from "@/components/EvidenceChip";
+import { OutcomeControl } from "@/components/OutcomeControl";
 
 export function generateStaticParams() {
   return calls.map((call) => ({ id: call.id }));
@@ -55,17 +56,25 @@ export default async function CallPage({
           </div>
 
           {/* Impacto no forecast — peso de decisão da tela */}
-          {call.dealValue ? (
-            <div className="rl-raised rounded-rl-card bg-rl-surface-1 px-4 py-3 text-right">
-              <div className="text-[10px] uppercase tracking-wider text-rl-text-3">Impacto no forecast</div>
-              <div className="rl-readout-hero mt-1 text-xl text-rl-oxy">{formatBRL(call.dealValue)}</div>
-              <div className="rl-readout mt-0.5 text-[11px] text-rl-text-3">
-                {call.forecastWeightPct}% do commit do trimestre · {call.dateLabel}
+          <div className="flex flex-wrap items-start gap-3">
+            {call.dealValue ? (
+              <div className="rl-raised rounded-rl-card bg-rl-surface-1 px-4 py-3 text-right">
+                <div className="text-[10px] uppercase tracking-wider text-rl-text-3">Impacto no forecast</div>
+                <div className="rl-readout-hero mt-1 text-xl text-rl-oxy">{formatBRL(call.dealValue)}</div>
+                <div className="rl-readout mt-0.5 text-[11px] text-rl-text-3">
+                  {call.forecastWeightPct}% do commit do trimestre · {call.dateLabel}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="rl-readout text-right text-sm text-rl-text-3">{call.dateLabel}</div>
-          )}
+            ) : (
+              <div className="rl-readout text-right text-sm text-rl-text-3">{call.dateLabel}</div>
+            )}
+
+            <OutcomeControl
+              account={call.account}
+              initialOutcome={call.outcome}
+              dealValue={call.dealValue}
+            />
+          </div>
         </div>
       </header>
 

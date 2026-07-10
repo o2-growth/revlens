@@ -2,6 +2,13 @@ import Link from "next/link";
 import type { Call } from "@/lib/mock/calls";
 import { Sparkline } from "@/components/Sparkline";
 import { SignalChip } from "@/components/SignalChip";
+import { OutcomeControl } from "@/components/OutcomeControl";
+
+const OUTCOME_LABEL: Record<Call["outcome"], string> = {
+  ganho: "ganho",
+  perdido: "perdido",
+  aberto: "em aberto",
+};
 
 type CallLogRowProps = {
   call: Call;
@@ -74,19 +81,43 @@ export function CallLogRow({ call, index = 0 }: CallLogRowProps) {
         )}
       </div>
 
-      <div>
+      <div className="flex flex-col items-start gap-1">
         {isProcessing ? (
           <span className="rl-readout inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-rl-text-3">
             <span className="h-1.5 w-1.5 rounded-full bg-rl-oxy rl-blip" />
             processando
           </span>
         ) : (
-          <SignalChip signal={call.signal} />
+          <>
+            <SignalChip signal={call.signal} />
+            {call.outcome !== "aberto" ? (
+              <span
+                className={`rl-readout inline-flex items-center gap-1 text-[10px] uppercase tracking-wide ${
+                  call.outcome === "ganho" ? "text-rl-oxy" : "text-rl-danger"
+                }`}
+              >
+                <span
+                  className={`h-1 w-1 rounded-full ${call.outcome === "ganho" ? "bg-rl-oxy" : "bg-rl-danger"}`}
+                />
+                {OUTCOME_LABEL[call.outcome]}
+              </span>
+            ) : null}
+          </>
         )}
       </div>
 
-      {/* ações reveladas em hover/foco + chevron */}
-      <div className="flex items-center gap-2">
+      {/* ações reveladas em hover/foco + atribuição rápida de resultado + chevron */}
+      <div className="flex items-center gap-3">
+        {!isProcessing ? (
+          <div className="hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 sm:block">
+            <OutcomeControl
+              account={call.account}
+              initialOutcome={call.outcome}
+              dealValue={call.dealValue}
+              variant="compact"
+            />
+          </div>
+        ) : null}
         <span className="rl-readout hidden text-[11px] text-rl-oxy opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 sm:inline">
           Abrir
         </span>

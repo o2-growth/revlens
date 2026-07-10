@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Toast = { id: number; message: string; tone: "oxy" | "neutral" };
+type Toast = { id: number; message: string; tone: "oxy" | "neutral" | "danger" };
 
 /** Dispara um toast de qualquer lugar: window.dispatchEvent(new CustomEvent("rl-toast", { detail })) */
 export function toast(message: string, tone: Toast["tone"] = "oxy") {
@@ -33,7 +33,11 @@ export function ToastHost() {
           key={t.id}
           className="rl-toast rl-raised pointer-events-auto flex items-center gap-2.5 rounded-rl-control bg-rl-surface-3 px-4 py-2.5 text-sm text-rl-text shadow-lg"
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${t.tone === "oxy" ? "bg-rl-oxy" : "bg-rl-text-3"}`} />
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              t.tone === "oxy" ? "bg-rl-oxy" : t.tone === "danger" ? "bg-rl-danger" : "bg-rl-text-3"
+            }`}
+          />
           {t.message}
         </div>
       ))}
