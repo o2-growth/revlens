@@ -234,6 +234,17 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Highlight do turno alvo (recibo → pula pro turno exato) */
+.rl-turn {
+  scroll-margin-top: 96px;
+  border-radius: var(--radius-rl-control);
+  transition: background-color 600ms var(--rl-ease-out);
+}
+.rl-turn:target {
+  background: var(--color-rl-oxy-band);
+  box-shadow: inset 2px 0 0 0 var(--color-rl-oxy);
+}
+
 /* View Transitions — morph de navegação (progressive enhancement) */
 ::view-transition-group(*) {
   animation-duration: var(--rl-dur-morph);
