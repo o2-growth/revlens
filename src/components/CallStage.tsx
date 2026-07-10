@@ -26,7 +26,10 @@ const momentLabel: Record<Moment["type"], string> = {
 export function CallStage({ call }: CallStageProps) {
   const moments = deriveMoments(call);
   const duration = call.durationSeconds || 1;
-  const [headPct, setHeadPct] = useState(0);
+  // Inicializa revelando a onda inteira (não coberta no primeiro paint) — só passa a
+  // esvaecer o que "ainda não foi auscultado" depois que a posição real de leitura
+  // é calculada (ver useEffect abaixo).
+  const [headPct, setHeadPct] = useState(100);
   const [hovered, setHovered] = useState<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
@@ -92,20 +95,25 @@ export function CallStage({ call }: CallStageProps) {
 
       {/* Pulso + cabeça de varredura viva */}
       <div className="relative h-20 w-full">
-        <PulseWave segments={call.pulse} variant="large" seed={call.id} draw className="h-20 w-full" />
+        {/* gradiente de opacidade aplicado direto no stroke da onda (mask no próprio
+            traço, não um véu por cima): sólido à esquerda da cabeça, esvaece à direita —
+            "o que ainda não foi auscultado" some do PRÓPRIO pulso, não é coberto. */}
+        <div
+          className="h-20 w-full"
+          style={
+            hasPulse
+              ? {
+                  maskImage: `linear-gradient(to right, black 0%, black ${headPct}%, transparent ${Math.min(100, headPct + 14)}%)`,
+                  WebkitMaskImage: `linear-gradient(to right, black 0%, black ${headPct}%, transparent ${Math.min(100, headPct + 14)}%)`,
+                }
+              : undefined
+          }
+        >
+          <PulseWave segments={call.pulse} variant="large" seed={call.id} draw className="h-20 w-full" />
+        </div>
 
         {hasPulse ? (
           <>
-            {/* véu à direita da cabeça (o que ainda não foi auscultado esvaece) */}
-            <div
-              className="pointer-events-none absolute inset-y-0 right-0 rounded-r-[8px]"
-              style={{
-                left: `${headPct}%`,
-                background:
-                  "linear-gradient(90deg, rgba(11,14,13,0) 0%, rgba(11,14,13,0.62) 100%)",
-              }}
-              aria-hidden
-            />
             {/* linha + dot da cabeça (o único glow vivo da tela) */}
             <div
               className="pointer-events-none absolute inset-y-0 w-px"
@@ -138,6 +146,14 @@ export function CallStage({ call }: CallStageProps) {
           <div className="relative h-2.5 w-full rounded-full bg-rl-inset">
             {moments.map((m, i) => {
               const left = Math.max(0, Math.min(100, (m.tSeconds / duration) * 100));
+              // clamp de borda — tick perto de 0%/100% não pode transbordar a viewport do card
+              const edgeLeft = left < 15;
+              const edgeRight = left > 85;
+              const popoverAnchor = edgeLeft
+                ? "left-0 translate-x-0"
+                : edgeRight
+                  ? "right-0 left-auto translate-x-0"
+                  : "left-1/2 -translate-x-1/2";
               return (
                 <button
                   key={i}
@@ -156,7 +172,9 @@ export function CallStage({ call }: CallStageProps) {
                     style={{ background: momentColor[m.type] }}
                   />
                   {hovered === i ? (
-                    <span className="rl-raised absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-56 -translate-x-1/2 rounded-rl-card bg-rl-surface-3 px-3 py-2 text-left">
+                    <span
+                      className={`rl-raised absolute bottom-[calc(100%+10px)] z-10 w-56 rounded-rl-card bg-rl-surface-3 px-3 py-2 text-left ${popoverAnchor}`}
+                    >
                       <span className="rl-readout mb-1 flex items-center gap-1.5 text-[10px]" style={{ color: momentColor[m.type] }}>
                         <span className="h-1.5 w-1.5 rotate-45" style={{ background: momentColor[m.type] }} />
                         {momentLabel[m.type]} · {m.atTimestamp}
