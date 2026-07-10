@@ -13,6 +13,7 @@ type Item = {
   hint?: string;
   kbd?: string;
   sparkData?: number[];
+  sparkTone?: "oxy" | "risk" | "danger";
   run: () => void;
 };
 
@@ -25,21 +26,34 @@ const PLACEHOLDERS = [
   "Tente: menção a concorrente",
 ];
 
+const CLOSE_MS = 120;
+
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [phIndex, setPhIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
+  // saída suave (~120ms) em vez de hard-cut — mantém montado durante o fade/scale-out
+  function requestClose() {
+    setClosing(true);
+    window.setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, CLOSE_MS);
+  }
+
   // abrir/fechar via ⌘K / Ctrl+K + evento do Topbar
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setOpen((o) => !o);
+        if (open) requestClose();
+        else setOpen(true);
       }
     };
     const onOpen = () => setOpen(true);
@@ -49,7 +63,7 @@ export function CommandPalette() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("rl-open-command", onOpen);
     };
-  }, []);
+  }, [open]);
 
   // reset ao abrir + placeholder rotativo
   useEffect(() => {
@@ -70,8 +84,8 @@ export function CommandPalette() {
   }, [open]);
 
   function go(href: string) {
-    setOpen(false);
     router.push(href);
+    requestClose();
   }
 
   const sections: Section[] = useMemo(() => {
@@ -93,6 +107,8 @@ export function CommandPalette() {
         hint: `${c.prospectName} · ${c.closer}`,
         kbd: c.dateLabel,
         sparkData: c.talkRatioByMinute,
+        // tom do tail deriva do risco real da call — verde só quando saudável
+        sparkTone: c.talkRatioRep >= 60 ? "risk" : "oxy",
         run: () => go(`/calls/${c.id}`),
       }));
 
@@ -113,7 +129,7 @@ export function CommandPalette() {
         label: "Copiar follow-up",
         hint: "Rascunho a partir da última call",
         run: () => {
-          setOpen(false);
+          requestClose();
           navigator.clipboard
             ?.writeText(
               "Oi! Ótimo falar com você hoje. Seguindo o combinado, envio os próximos passos e fico à disposição.",
@@ -140,7 +156,7 @@ export function CommandPalette() {
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
       e.preventDefault();
-      setOpen(false);
+      requestClose();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive(Math.min(activeIdx + 1, flat.length - 1));
@@ -159,21 +175,28 @@ export function CommandPalette() {
     el?.scrollIntoView({ block: "nearest" });
   }, [activeIdx]);
 
-  if (!open) return null;
+  if (!open && !closing) return null;
 
   let running = -1;
 
   return (
     <div
       className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[12vh]"
-      onClick={() => setOpen(false)}
+      onClick={() => requestClose()}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" aria-hidden />
+      <div
+        className={`absolute inset-0 bg-black/50 backdrop-blur-[2px] ${
+          closing ? "rl-palette-backdrop-exit" : "rl-palette-backdrop-enter"
+        }`}
+        aria-hidden
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Paleta de comandos"
-        className="rl-raised relative w-full max-w-xl overflow-hidden rounded-rl-modal bg-rl-surface-3"
+        className={`rl-raised relative w-full max-w-xl overflow-hidden rounded-rl-modal bg-rl-surface-3 ${
+          closing ? "rl-palette-panel-exit" : "rl-palette-panel-enter"
+        }`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
@@ -217,7 +240,7 @@ export function CommandPalette() {
                       type="button"
                       onMouseEnter={() => setActive(idx)}
                       onClick={item.run}
-                      className={`relative flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                      className={`relative flex w-full items-center gap-3 px-4 py-2.5 text-left rl-t-hover transition-colors ${
                         isActive ? "bg-rl-surface-2" : "hover:bg-rl-surface-2/50"
                       }`}
                     >
@@ -232,7 +255,7 @@ export function CommandPalette() {
                       </div>
                       {item.sparkData ? (
                         <div className="hidden h-4 w-16 shrink-0 sm:block">
-                          <Sparkline data={item.sparkData} domain={[30, 90]} tone="oxy" height={16} />
+                          <Sparkline data={item.sparkData} domain={[30, 90]} tone={item.sparkTone ?? "oxy"} height={16} />
                         </div>
                       ) : null}
                       {item.kbd ? (

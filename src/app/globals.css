@@ -88,8 +88,11 @@ body {
   line-height: 0.95;
 }
 
-/* Glow sutil de sinal — só em elementos "vivos" (pulso ativo, botão primário hover) */
-.rl-glow {
+/* Glow de sinal — aplicado intencionalmente ao CTA de intervenção em hover (elemento "vivo") */
+.rl-cta-glow {
+  transition: box-shadow var(--rl-dur-hover) var(--rl-ease-out);
+}
+.rl-cta-glow:hover {
   box-shadow: 0 0 0 1px var(--color-rl-oxy-dim), 0 0 24px -8px rgba(108, 242, 105, 0.4);
 }
 
@@ -115,9 +118,21 @@ body {
 }
 
 /* ── Layering — linha-de-luz de 1px (volume sem drop-shadow) ── */
+/* Reservada aos containers-herói (TrendChart, InterventionQueue, CallStage, ⌘K,
+   toast, popover do MomentTrack). Sub-células de grid usam o wrapper, não cada uma. */
 .rl-raised {
   border: 1px solid var(--color-rl-border);
   box-shadow: inset 0 1px 0 0 rgba(230, 255, 240, 0.06); /* quina de luz no topo */
+}
+
+/* ── Timing tokens aplicados — troque transition-colors/transform crus por elas ── */
+.rl-t-hover {
+  transition-duration: var(--rl-dur-hover);
+  transition-timing-function: var(--rl-ease-out);
+}
+.rl-t-press {
+  transition-duration: var(--rl-dur-fast);
+  transition-timing-function: var(--rl-ease-press);
 }
 
 /* ── Readout herói: tracking um pouco mais negativo que o base ── */
@@ -141,13 +156,16 @@ body {
 
 /* ══════ CAMADA 1 — "LIGAR" (one-shot no mount) ══════ */
 
-/* Line-drawing do pulse/forecast */
+/* Line-drawing do pulse/forecast — normalizado via pathLength="1" no elemento
+   (dasharray/offset em unidades de 0-1, não px, então qualquer comprimento desenha
+   do frame 0, sem tempo morto de lead-in). */
 .rl-trace {
-  stroke-dasharray: 2000;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   animation: rl-draw var(--rl-dur-draw) var(--rl-ease-out) both;
 }
 @keyframes rl-draw {
-  from { stroke-dashoffset: 2000; }
+  from { stroke-dashoffset: 1; }
   to { stroke-dashoffset: 0; }
 }
 
@@ -191,13 +209,24 @@ body {
   filter: drop-shadow(0 0 5px rgba(108, 242, 105, 0.55));
 }
 
-/* Flatline blip (oxímetro calibrando — call processando) */
+/* Flatline blip — dot de status (badge "processando"), pisca no lugar */
 .rl-blip {
   animation: rl-blip 1.8s var(--rl-ease-out) infinite;
 }
 @keyframes rl-blip {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 1; }
+}
+
+/* Flatline sweep — oxímetro calibrando: o blip VARRE a linha reta (monitor ligando),
+   não pisca parado. Usado no mini-pulse/skeleton de call em processamento. */
+.rl-blip-sweep {
+  animation: rl-blip-sweep 1.8s linear infinite;
+}
+@keyframes rl-blip-sweep {
+  0% { left: 0%; opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { left: 100%; opacity: 0.4; }
 }
 
 /* ══════ CAMADA 3 — "RESPONDER" (input) ══════ */
@@ -225,13 +254,51 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Toast (apito do monitor) */
+/* Toast (apito do monitor) — entra assentando, sai recuando (nunca hard-cut) */
 .rl-toast {
   animation: rl-toast-in 400ms var(--rl-ease-out) both;
 }
 @keyframes rl-toast-in {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
+}
+.rl-toast-out {
+  animation: rl-toast-out 200ms var(--rl-ease-out) both;
+}
+@keyframes rl-toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(8px); }
+}
+
+/* Paleta de comandos (⌘K) — backdrop fade + painel assenta (scale/translate) na entrada,
+   e recua suavemente na saída em vez de hard-cut. */
+.rl-palette-backdrop-enter {
+  animation: rl-palette-backdrop-in var(--rl-dur-hover) var(--rl-ease-out) both;
+}
+.rl-palette-backdrop-exit {
+  animation: rl-palette-backdrop-out 120ms var(--rl-ease-out) both;
+}
+@keyframes rl-palette-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rl-palette-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.rl-palette-panel-enter {
+  animation: rl-palette-panel-in var(--rl-dur-hover) var(--rl-ease-out) both;
+}
+.rl-palette-panel-exit {
+  animation: rl-palette-panel-out 120ms var(--rl-ease-out) both;
+}
+@keyframes rl-palette-panel-in {
+  from { opacity: 0; transform: scale(0.98) translateY(-6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes rl-palette-panel-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.98) translateY(-6px); }
 }
 
 /* Highlight do turno alvo (recibo → pula pro turno exato) */
@@ -257,8 +324,14 @@ body {
   .rl-enter { opacity: 1; animation: none; transform: none; }
   .rl-shimmer::after { animation: none; display: none; }
   .rl-blip { animation: none; opacity: 1; }
+  .rl-blip-sweep { animation: none; opacity: 0.7; left: 50%; }
   .rl-ping { animation: none; }
   .rl-toast { animation: none; }
+  .rl-toast-out { animation: none; opacity: 0; }
+  .rl-palette-backdrop-enter,
+  .rl-palette-backdrop-exit,
+  .rl-palette-panel-enter,
+  .rl-palette-panel-exit { animation: none; opacity: 1; transform: none; }
   .rl-press { transition: none; }
   .rl-live-glow { filter: none; }
   * { view-transition-name: none !important; }

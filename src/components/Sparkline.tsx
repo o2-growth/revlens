@@ -54,6 +54,7 @@ export function Sparkline({
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
       className={className}
+      style={{ height, display: "block" }}
       aria-hidden
     >
       <polyline
@@ -66,7 +67,9 @@ export function Sparkline({
         opacity={0.9}
       />
       {tail ? (
-        <circle cx={last.x} cy={last.y} r={strokeWidth + 0.6} fill="var(--color-rl-oxy-bright)" />
+        // cauda pinta pela MESMA cor do tone — #01f451 (oxy-bright) fica reservado
+        // ao playhead vivo / ponto "Atual", nunca decorativo num vital de risco.
+        <circle cx={last.x} cy={last.y} r={strokeWidth + 0.6} fill={color} />
       ) : null}
     </svg>
   );
