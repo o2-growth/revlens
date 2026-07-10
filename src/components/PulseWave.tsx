@@ -6,6 +6,8 @@ type PulseWaveProps = {
   variant?: "sparkline" | "large";
   /** id da call (ou outra string estável) — dá a cada pulso uma forma própria, sem Math.random */
   seed?: string;
+  /** desenha o traço no mount (só no large — assinatura do instrumento vivo) */
+  draw?: boolean;
   className?: string;
 };
 
@@ -67,7 +69,7 @@ function buildPoints(
   return runs;
 }
 
-export function PulseWave({ segments, variant = "large", seed = "", className = "" }: PulseWaveProps) {
+export function PulseWave({ segments, variant = "large", seed = "", draw = false, className = "" }: PulseWaveProps) {
   const isLarge = variant === "large";
   const width = isLarge ? 960 : 96;
   const height = isLarge ? 96 : 24;
@@ -112,6 +114,8 @@ export function PulseWave({ segments, variant = "large", seed = "", className = 
       {runs.map((run, i) => (
         <polyline
           key={i}
+          className={draw ? "rl-trace" : undefined}
+          style={draw ? { animationDelay: run.speaker === "rep" ? "0ms" : "120ms" } : undefined}
           points={run.points}
           fill="none"
           stroke={run.speaker === "rep" ? REP_COLOR : PROSPECT_COLOR}

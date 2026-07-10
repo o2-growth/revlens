@@ -23,14 +23,13 @@ export function useCountUp(
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-    if (reduce) {
-      setValue(target);
-      return;
-    }
-
     const run = () => {
       if (started.current) return;
       started.current = true;
+      if (reduce) {
+        setValue(target);
+        return;
+      }
       const start = performance.now();
       const tick = (now: number) => {
         const t = Math.min(1, (now - start) / duration);

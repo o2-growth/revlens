@@ -8,7 +8,11 @@ export function SpeakerTurn({ turn }: SpeakerTurnProps) {
   const isRep = turn.speaker === "rep";
 
   return (
-    <div id={`t-${turn.timestamp}`} className="flex gap-3 py-2.5">
+    <div
+      id={`t-${turn.timestamp}`}
+      data-turn-ts={turn.timestamp}
+      className="rl-turn flex gap-3 px-2 py-2.5"
+    >
       <div
         className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
           isRep ? "bg-rl-oxy" : "bg-rl-prospect"
