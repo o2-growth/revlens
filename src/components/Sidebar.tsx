@@ -80,11 +80,26 @@ function PipelineIcon() {
   );
 }
 
+function PlaybookIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden>
+      <path
+        d="M4 2.5h9v12H4a1.5 1.5 0 01-1.5-1.5v-9A1.5 1.5 0 014 2.5z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M5.5 5.5h5.5M5.5 8h5.5M5.5 10.5h3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/", label: "Painel", icon: PainelIcon, disabled: false },
   { href: "/calls", label: "Calls", icon: CallsIcon, disabled: false },
   { href: "/search", label: "Busca", icon: SearchIcon, disabled: false },
-  { href: "#", label: "Coaching", icon: CoachingIcon, disabled: true },
+  { href: "/coaching", label: "Coaching", icon: CoachingIcon, disabled: false },
+  { href: "/playbook", label: "Playbook", icon: PlaybookIcon, disabled: false },
   { href: "#", label: "Pipeline", icon: PipelineIcon, disabled: true },
 ];
 
