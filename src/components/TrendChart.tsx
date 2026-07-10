@@ -2,7 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { WeeklyPoint } from "@/lib/mock/intelligence";
-import { forecastBand, forecast } from "@/lib/mock/intelligence";
+import { forecastBand, forecast, forecastDrivers } from "@/lib/mock/intelligence";
+
+const driverTone: Record<string, string> = {
+  oxy: "text-rl-oxy",
+  risk: "text-rl-risk",
+  danger: "text-rl-danger",
+  neutral: "text-rl-text-3",
+};
+const driverDot: Record<string, string> = {
+  oxy: "bg-rl-oxy",
+  risk: "bg-rl-risk",
+  danger: "bg-rl-danger",
+  neutral: "bg-rl-text-3",
+};
 
 type TrendChartProps = {
   data: WeeklyPoint[];
@@ -84,22 +97,30 @@ export function TrendChart({ data }: TrendChartProps) {
 
   return (
     <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <span className="text-[10px] uppercase tracking-wider text-rl-text-3">
-            Linha do horizonte · sentimento + forecast
+            Commit do trimestre · pipeline ponderado
           </span>
           <div className="mt-1 flex items-baseline gap-2">
             <span className={`rl-readout-hero text-lg ${confidenceClass[tone]}`}>R$ {formatMi(forecast.commit)}</span>
-            <span className="rl-readout text-[11px] text-rl-text-3">commit do trimestre</span>
             <span className="rl-readout text-[11px] text-rl-text-2">
-              · confiança <span className={confidenceClass[tone]}>{confPct}%</span>
+              confiança <span className={confidenceClass[tone]}>{confPct}%</span>
             </span>
+          </div>
+          {/* drivers — a confiança deixa de ser black-box */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {forecastDrivers.map((d, i) => (
+              <span key={i} className={`inline-flex items-center gap-1.5 text-[10px] ${driverTone[d.tone]}`}>
+                <span className={`h-1 w-1 rounded-full ${driverDot[d.tone]}`} />
+                <span className="rl-readout">{d.label}</span>
+              </span>
+            ))}
           </div>
         </div>
         <span className="flex flex-wrap items-center gap-4 text-[11px] text-rl-text-3">
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-rl-oxy" /> sentimento
+            <span className="h-1.5 w-1.5 rounded-full bg-rl-oxy" /> sentimento (índice de saúde)
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-[7px] w-3.5 rounded-sm" style={{ background: "var(--color-rl-oxy-band)", boxShadow: "inset 0 0 0 1px rgba(108,242,105,0.22)" }} /> faixa saudável

@@ -3,15 +3,21 @@ import { Topbar } from "@/components/Topbar";
 import { LeaderBriefing } from "@/components/LeaderBriefing";
 import { OperationVitals } from "@/components/OperationVitals";
 import { TrendChart } from "@/components/TrendChart";
+import { CommitComposition } from "@/components/CommitComposition";
 import { InterventionQueue } from "@/components/InterventionQueue";
 import { ObjectionRanking } from "@/components/ObjectionRanking";
+import { CompetitorPressure } from "@/components/CompetitorPressure";
 import { TeamRanking } from "@/components/TeamRanking";
 import { BuyingSignals } from "@/components/BuyingSignals";
 import {
   operationMetrics,
   weeklyTrend,
   interventionQueue,
+  commitComposition,
   objectionRanking,
+  baselineWinRate,
+  competitorPressure,
+  competitorTotals,
   teamRanking,
   buyingSignals,
   sinceYesterday,
@@ -27,11 +33,28 @@ export default function PainelPage() {
 
         <OperationVitals metrics={operationMetrics} />
 
-        <TrendChart data={weeklyTrend} />
-
+        {/* Ação + forecast acima da dobra: a triagem vem antes do relatório */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_1fr]">
           <InterventionQueue items={interventionQueue} />
-          <ObjectionRanking items={objectionRanking} />
+          <CommitComposition
+            quota={commitComposition.quota}
+            commit={commitComposition.commit}
+            booked={commitComposition.booked}
+            weightedPipeline={commitComposition.weightedPipeline}
+            gapToQuota={commitComposition.gapToQuota}
+            deals={commitComposition.deals}
+          />
+        </div>
+
+        <TrendChart data={weeklyTrend} />
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <ObjectionRanking items={objectionRanking} baseline={baselineWinRate} />
+          <CompetitorPressure
+            items={competitorPressure}
+            totalDeals={competitorTotals.dealsAffected}
+            totalValue={competitorTotals.valueAtStake}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

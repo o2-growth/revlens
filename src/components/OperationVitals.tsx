@@ -24,7 +24,7 @@ const sparkTone = {
 export function OperationVitals({ metrics }: OperationVitalsProps) {
   return (
     <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-2">
-      <div className="grid grid-cols-2 divide-x divide-y divide-rl-border-soft sm:grid-cols-5 sm:divide-y-0">
+      <div className="grid grid-cols-2 divide-x divide-y divide-rl-border-soft sm:grid-cols-3 sm:divide-y-0 xl:grid-cols-6">
         {metrics.map((m, i) => {
           const dMin = Math.min(...m.history);
           const dMax = Math.max(...m.history);
@@ -39,11 +39,16 @@ export function OperationVitals({ metrics }: OperationVitalsProps) {
                 <Readout
                   value={m.numericValue}
                   unit={m.unit}
+                  prefix={m.prefix}
+                  decimals={m.decimals ?? 0}
                   tone={toneMap[m.toneColor]}
                   delayMs={i * 70}
                   hero
                 />
               </div>
+              {m.subLegend ? (
+                <div className="mt-0.5 rl-readout text-[10px] text-rl-text-3">{m.subLegend}</div>
+              ) : null}
               <Delta
                 className="mt-1.5"
                 label={m.deltaLabel}

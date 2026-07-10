@@ -17,6 +17,8 @@ const toneClass: Record<Tone, string> = {
 type ReadoutProps = {
   value: number;
   unit?: string;
+  /** prefixo rebaixado (ex.: "R$ ") — mesma escala da unidade */
+  prefix?: string;
   tone?: Tone;
   /** desliga o count-up (ex.: quando não é medição-herói) */
   animate?: boolean;
@@ -28,10 +30,11 @@ type ReadoutProps = {
   delayMs?: number;
 };
 
-/** Valor de medição em mono + unidade rebaixada (0.62em, text-3). */
+/** Valor de medição em mono + unidade/prefixo rebaixado (0.62em, text-3). */
 export function Readout({
   value,
   unit,
+  prefix,
   tone = "text",
   animate = true,
   decimals = 0,
@@ -45,6 +48,9 @@ export function Readout({
 
   return (
     <span ref={ref} className={`${base} ${toneClass[tone]} rl-measuring ${className}`}>
+      {prefix ? (
+        <span className="mr-px align-baseline text-[0.62em] text-rl-text-3">{prefix.trim()}</span>
+      ) : null}
       {shown.toLocaleString("pt-BR", {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
