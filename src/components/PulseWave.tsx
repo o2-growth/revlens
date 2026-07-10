@@ -1,0 +1,104 @@
+import type { PulseSegment } from "@/lib/mock/calls";
+
+type PulseWaveProps = {
+  segments: PulseSegment[];
+  /** "sparkline" = mini inline (call log), "large" = página da call */
+  variant?: "sparkline" | "large";
+  className?: string;
+};
+
+const REP_COLOR = "var(--color-rl-oxy)";
+const PROSPECT_COLOR = "var(--color-rl-prospect)";
+
+// Gera um traço tipo oxímetro: picos determinísticos por segmento (sem Math.random
+// pra renderizar igual em server e client).
+function buildPoints(segments: PulseSegment[], width: number, height: number) {
+  const mid = height / 2;
+  const totalWeight = segments.reduce((sum, s) => sum + s.weight, 0) || 1;
+  const pxPerWeight = width / totalWeight;
+
+  const runs: { speaker: PulseSegment["speaker"]; points: string }[] = [];
+  let x = 0;
+
+  segments.forEach((seg, i) => {
+    const segWidth = seg.weight * pxPerWeight;
+    const steps = Math.max(3, Math.round(seg.weight));
+    const stepWidth = segWidth / steps;
+    const amp = mid * (0.35 + Math.min(seg.weight, 6) / 8);
+    const pts: string[] = [`${x.toFixed(1)},${mid.toFixed(1)}`];
+
+    for (let s = 1; s <= steps; s++) {
+      const px = x + stepWidth * s;
+      // padrão determinístico tipo batimento: sobe rápido, desce, pequena crista
+      const phase = (i * 7 + s) % 4;
+      const dir = seg.speaker === "rep" ? -1 : 1;
+      let py = mid;
+      if (phase === 0) py = mid + dir * amp;
+      else if (phase === 1) py = mid + dir * amp * 0.3;
+      else if (phase === 2) py = mid - dir * amp * 0.55;
+      else py = mid;
+      pts.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+    }
+    pts.push(`${(x + segWidth).toFixed(1)},${mid.toFixed(1)}`);
+
+    runs.push({ speaker: seg.speaker, points: pts.join(" ") });
+    x += segWidth;
+  });
+
+  return runs;
+}
+
+export function PulseWave({ segments, variant = "large", className = "" }: PulseWaveProps) {
+  const isLarge = variant === "large";
+  const width = isLarge ? 960 : 96;
+  const height = isLarge ? 96 : 24;
+
+  if (segments.length === 0) {
+    // estado sem dados (call processando) — linha reta pontilhada, neutra
+    return (
+      <svg
+        width="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className={className}
+        aria-hidden
+      >
+        <line
+          x1={0}
+          y1={height / 2}
+          x2={width}
+          y2={height / 2}
+          stroke="var(--color-rl-text-muted)"
+          strokeWidth={1.5}
+          strokeDasharray="2 4"
+        />
+      </svg>
+    );
+  }
+
+  const runs = buildPoints(segments, width, height);
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className={className}
+      role="img"
+      aria-label="Onda de tempo de fala: verde é o vendedor, teal é o prospect"
+    >
+      {runs.map((run, i) => (
+        <polyline
+          key={i}
+          points={run.points}
+          fill="none"
+          stroke={run.speaker === "rep" ? REP_COLOR : PROSPECT_COLOR}
+          strokeWidth={isLarge ? 1.75 : 1.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={isLarge ? 0.95 : 0.85}
+        />
+      ))}
+    </svg>
+  );
+}
