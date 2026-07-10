@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCallById, calls } from "@/lib/mock/calls";
+import { calls } from "@/lib/mock/calls";
+import { getCall, type Call } from "@/lib/data/calls";
 import { CallStage } from "@/components/CallStage";
 import { VitalsReadout } from "@/components/VitalsReadout";
 import { VitalsSkeleton, PulseSkeleton } from "@/components/CallSkeleton";
@@ -23,7 +24,7 @@ export default async function CallPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const call = getCallById(id);
+  const call = await getCall(id);
 
   if (!call) notFound();
 
@@ -197,7 +198,7 @@ export default async function CallPage({
   );
 }
 
-function NextSteps({ call }: { call: ReturnType<typeof getCallById> }) {
+function NextSteps({ call }: { call: Call | undefined }) {
   if (!call?.nextSteps) return null;
   return (
     <ul className="flex flex-col gap-2.5">
