@@ -19,12 +19,31 @@ export type TranscriptTurn = {
 export type Objection = {
   text: string;
   severity: "risco" | "critica";
+  /** recibo: timestamp do turno que originou a objeção (mm:ss) */
+  atTimestamp?: string;
+  /** citação literal do transcript (a prova) */
+  quote?: string;
+};
+
+/** Sinal de compra com recibo — deep-link pro turno exato */
+export type BuyingSignalDetail = {
+  atTimestamp: string; // mm:ss
+  quote: string;
 };
 
 export type NextStep = {
   text: string;
   done: boolean;
   owner: string;
+};
+
+/** Evento na timeline da call (para o MomentTrack scrubável) */
+export type MomentType = "sinal" | "objecao" | "objecao-critica" | "preco";
+export type Moment = {
+  tSeconds: number;
+  type: MomentType;
+  quote: string;
+  atTimestamp: string;
 };
 
 export type Call = {
@@ -46,15 +65,30 @@ export type Call = {
   buyingSignalsCount: number;
   signal: "sinal" | "risco" | null;
   pulse: PulseSegment[];
+  /** vitais de coaching — só significam contra a norma */
+  longestMonologueSec: number;
+  questionsPerHour: number;
+  /** talk-ratio do rep por minuto — escala fixa 0-100 pra comparabilidade entre calls */
+  talkRatioByMinute?: number[];
+  /** impacto do deal no commit do trimestre (R$) — peso de decisão */
+  dealValue?: number;
+  forecastWeightPct?: number; // % do commit do trimestre que esse deal representa
   summary?: string;
   keyPoints?: string[];
   objections?: Objection[];
+  buyingSignalDetails?: BuyingSignalDetail[];
   nextSteps?: NextStep[];
   transcript: TranscriptTurn[];
 };
 
 function pulseFrom(pattern: Array<[Speaker, number]>): PulseSegment[] {
   return pattern.map(([speaker, weight]) => ({ speaker, weight }));
+}
+
+/** mm:ss -> segundos */
+export function tsToSeconds(ts: string): number {
+  const [m, s] = ts.split(":").map(Number);
+  return (m || 0) * 60 + (s || 0);
 }
 
 export const calls: Call[] = [
@@ -76,6 +110,11 @@ export const calls: Call[] = [
     objectionsCount: 1,
     buyingSignalsCount: 3,
     signal: "sinal",
+    longestMonologueSec: 74,
+    questionsPerHour: 14,
+    talkRatioByMinute: [52, 60, 44, 41, 38, 55, 47, 43, 49, 45],
+    dealValue: 480000,
+    forecastWeightPct: 22,
     pulse: pulseFrom([
       ["rep", 3], ["prospect", 2], ["rep", 4], ["prospect", 5], ["rep", 2],
       ["prospect", 3], ["rep", 5], ["prospect", 2], ["rep", 3], ["prospect", 4],
@@ -88,7 +127,17 @@ export const calls: Call[] = [
       "Decisão em comitê: Fernanda + CTO + Compras. CTO ainda não participou de nenhuma call.",
     ],
     objections: [
-      { text: "Precisa validar integração com o TMS atual (Solvis) antes de assinar.", severity: "risco" },
+      {
+        text: "Precisa validar integração com o TMS atual (Solvis) antes de assinar.",
+        severity: "risco",
+        atTimestamp: "02:40",
+        quote: "Mas preciso entender como isso conversa com o nosso TMS, hoje usamos o Solvis.",
+      },
+    ],
+    buyingSignalDetails: [
+      { atTimestamp: "04:20", quote: "Já aprovamos verba pra Q3 justamente pra resolver esse gap de visibilidade." },
+      { atTimestamp: "03:30", quote: "Seria bom trazer nosso CTO, o Ricardo, pra essa conversa técnica." },
+      { atTimestamp: "05:24", quote: "Se puder incluir a LogTrack no comparativo, ajuda demais na minha apresentação interna." },
     ],
     nextSteps: [
       { text: "Enviar comparativo técnico vs. LogTrack até quinta-feira.", done: false, owner: "Bruno" },
@@ -102,7 +151,7 @@ export const calls: Call[] = [
       { speaker: "prospect", speakerName: "Fernanda Aquino", timestamp: "00:52", text: "Exatamente. A gente rastreia bonitinho enquanto é frota própria, mas assim que entra parceiro terceirizado é telefone e planilha. Isso já gerou atraso feio com um cliente grande mês passado." },
       { speaker: "rep", speakerName: "Bruno Kellner", timestamp: "01:20", text: "Entendi. E hoje, quantos veículos transitam por essa zona cinzenta, entre frota própria e parceira?" },
       { speaker: "prospect", speakerName: "Fernanda Aquino", timestamp: "01:34", text: "Da frota total de 340, uns 40% passam por parceiro em algum trecho da rota." },
-      { speaker: "rep", speakerName: "Bruno Kellner", timestamp: "02:10", text: "Faz sentido. O revlens... quer dizer, o produto que eu vendo, ó, nem é revlens, foco. O nosso módulo de rastreamento multimodal resolve exatamente esse handoff, com um único painel pra frota própria e parceira." },
+      { speaker: "rep", speakerName: "Bruno Kellner", timestamp: "02:10", text: "Faz sentido. O nosso módulo de rastreamento multimodal resolve exatamente esse handoff, com um único painel pra frota própria e parceira." },
       { speaker: "prospect", speakerName: "Fernanda Aquino", timestamp: "02:40", text: "Isso me interessa bastante. Mas preciso entender como isso conversa com o nosso TMS, hoje usamos o Solvis." },
       { speaker: "rep", speakerName: "Bruno Kellner", timestamp: "03:05", text: "Temos integração nativa com Solvis via API, isso não é problema. Posso trazer nosso time técnico numa próxima call pra detalhar isso com quem for validar." },
       { speaker: "prospect", speakerName: "Fernanda Aquino", timestamp: "03:30", text: "Ótimo, seria bom trazer nosso CTO, o Ricardo, pra essa conversa técnica." },
@@ -130,6 +179,11 @@ export const calls: Call[] = [
     objectionsCount: 3,
     buyingSignalsCount: 0,
     signal: "risco",
+    longestMonologueSec: 156,
+    questionsPerHour: 4,
+    talkRatioByMinute: [70, 82, 88, 74, 91, 66, 72, 60],
+    dealValue: 320000,
+    forecastWeightPct: 15,
     pulse: pulseFrom([
       ["rep", 6], ["prospect", 1], ["rep", 5], ["prospect", 1], ["rep", 6],
       ["prospect", 2], ["rep", 4], ["prospect", 1],
@@ -142,9 +196,24 @@ export const calls: Call[] = [
       "Rep não conseguiu identificar o processo de decisão nem outros stakeholders.",
     ],
     objections: [
-      { text: "Já temos contrato vigente com a RotaCerta até dezembro.", severity: "critica" },
-      { text: "Corte de orçamento de TI anunciado para o H2.", severity: "critica" },
-      { text: "Não vê diferencial claro frente ao fornecedor atual.", severity: "risco" },
+      {
+        text: "Já temos contrato vigente com a RotaCerta até dezembro.",
+        severity: "critica",
+        atTimestamp: "03:10",
+        quote: "A gente já tem contrato com a RotaCerta até dezembro. Não sei se faz sentido continuar essa conversa agora.",
+      },
+      {
+        text: "Corte de orçamento de TI anunciado para o H2.",
+        severity: "critica",
+        atTimestamp: "03:50",
+        quote: "Tivemos um corte de orçamento de TI pro segundo semestre, então qualquer investimento novo tá mais difícil de aprovar agora.",
+      },
+      {
+        text: "Não vê diferencial claro frente ao fornecedor atual.",
+        severity: "risco",
+        atTimestamp: "05:30",
+        quote: "Sinceramente não estou vendo muita diferença do que já usamos hoje.",
+      },
     ],
     nextSteps: [
       { text: "Reagendar com foco em descoberta, reduzir talk ratio do rep.", done: false, owner: "Camila" },
@@ -181,6 +250,11 @@ export const calls: Call[] = [
     objectionsCount: 0,
     buyingSignalsCount: 5,
     signal: "sinal",
+    longestMonologueSec: 48,
+    questionsPerHour: 18,
+    talkRatioByMinute: [42, 38, 33, 40, 36, 44, 35, 39, 37, 41],
+    dealValue: 620000,
+    forecastWeightPct: 28,
     pulse: pulseFrom([
       ["rep", 2], ["prospect", 5], ["rep", 3], ["prospect", 6], ["rep", 2],
       ["prospect", 4], ["rep", 3], ["prospect", 5], ["rep", 2], ["prospect", 4],
@@ -193,6 +267,13 @@ export const calls: Call[] = [
       "Mencionou expansão para 3 novas plantas em 2027, o que amplia o ticket.",
     ],
     objections: [],
+    buyingSignalDetails: [
+      { atTimestamp: "00:20", quote: "Testamos três fornecedores em paralelo e o de vocês foi o único que resolveu o problema sem gambiarra." },
+      { atTimestamp: "01:58", quote: "Se vocês me mandarem uma proposta formal essa semana, eu levo pro nosso comitê na sexta." },
+      { atTimestamp: "02:50", quote: "Temos três plantas novas entrando em operação em 2027, já quero deixar isso previsto no contrato." },
+      { atTimestamp: "03:40", quote: "Cronograma detalhado de implementação e o SLA de suporte. Com isso eu fecho a apresentação." },
+      { atTimestamp: "01:05", quote: "Já ter integração pronta com nosso ERP pra mim já elimina um baita risco de projeto." },
+    ],
     nextSteps: [
       { text: "Enviar proposta comercial formal em até 48h.", done: false, owner: "Bruno" },
       { text: "Incluir cláusula de expansão para novas plantas.", done: false, owner: "Bruno" },
@@ -229,6 +310,11 @@ export const calls: Call[] = [
     objectionsCount: 2,
     buyingSignalsCount: 1,
     signal: "risco",
+    longestMonologueSec: 92,
+    questionsPerHour: 9,
+    talkRatioByMinute: [50, 58, 62, 54, 49, 56, 60, 52],
+    dealValue: 260000,
+    forecastWeightPct: 12,
     pulse: pulseFrom([
       ["rep", 3], ["prospect", 3], ["rep", 4], ["prospect", 2], ["rep", 3],
       ["prospect", 3], ["rep", 4], ["prospect", 2],
@@ -241,8 +327,21 @@ export const calls: Call[] = [
       "Pediu documentação formal de certificações (ISO 27001, LGPD).",
     ],
     objections: [
-      { text: "Preocupação com onde os dados ficam hospedados (residência de dados).", severity: "risco" },
-      { text: "Time de segurança ainda não validou o fornecedor.", severity: "risco" },
+      {
+        text: "Preocupação com onde os dados ficam hospedados (residência de dados).",
+        severity: "risco",
+        atTimestamp: "00:22",
+        quote: "A principal é sobre onde os dados ficam hospedados. Seguradora tem exigência forte de residência de dados no Brasil.",
+      },
+      {
+        text: "Time de segurança (CISO) ainda não validou o fornecedor.",
+        severity: "risco",
+        atTimestamp: "01:45",
+        quote: "Preciso disso por escrito pra passar pro nosso CISO, ele que vai bater o martelo em termos de segurança.",
+      },
+    ],
+    buyingSignalDetails: [
+      { atTimestamp: "02:20", quote: "Se a documentação estiver em ordem, aí sim eu me sinto confortável em recomendar avançar." },
     ],
     nextSteps: [
       { text: "Enviar dossiê de certificações e política de residência de dados.", done: false, owner: "Ísis" },
@@ -277,6 +376,11 @@ export const calls: Call[] = [
     objectionsCount: 1,
     buyingSignalsCount: 2,
     signal: "sinal",
+    longestMonologueSec: 58,
+    questionsPerHour: 15,
+    talkRatioByMinute: [46, 42, 48, 40, 45, 43],
+    dealValue: 180000,
+    forecastWeightPct: 8,
     pulse: pulseFrom([
       ["rep", 3], ["prospect", 4], ["rep", 2], ["prospect", 3], ["rep", 3], ["prospect", 3],
     ]),
@@ -288,7 +392,16 @@ export const calls: Call[] = [
       "Renata decide sozinha, sem comitê.",
     ],
     objections: [
-      { text: "Receio de resistência da equipe mais sênior a uma ferramenta nova.", severity: "risco" },
+      {
+        text: "Receio de resistência da equipe mais sênior a uma ferramenta nova.",
+        severity: "risco",
+        atTimestamp: "01:42",
+        quote: "Minha preocupação maior é a resistência dos advogados mais antigos a mudar de ferramenta.",
+      },
+    ],
+    buyingSignalDetails: [
+      { atTimestamp: "00:18", quote: "Já perdemos um prazo esse ano por causa disso, foi um susto grande." },
+      { atTimestamp: "02:35", quote: "Se resolver essa parte de adoção, orçamento não vai ser problema." },
     ],
     nextSteps: [
       { text: "Enviar case de outro escritório de médio porte que migrou com sucesso.", done: false, owner: "Camila" },
@@ -323,6 +436,11 @@ export const calls: Call[] = [
     objectionsCount: 2,
     buyingSignalsCount: 2,
     signal: "risco",
+    longestMonologueSec: 68,
+    questionsPerHour: 11,
+    talkRatioByMinute: [48, 54, 50, 46, 53, 49, 55, 47],
+    dealValue: 410000,
+    forecastWeightPct: 19,
     pulse: pulseFrom([
       ["rep", 4], ["prospect", 3], ["rep", 3], ["prospect", 4], ["rep", 3],
       ["prospect", 2], ["rep", 4], ["prospect", 3],
@@ -335,8 +453,22 @@ export const calls: Call[] = [
       "Decisão prevista para as próximas duas semanas.",
     ],
     objections: [
-      { text: "Preço 20% acima da proposta concorrente (SunOps).", severity: "critica" },
-      { text: "Ainda não validou tempo de resposta do suporte.", severity: "risco" },
+      {
+        text: "Preço 20% acima da proposta concorrente (SunOps).",
+        severity: "critica",
+        atTimestamp: "00:24",
+        quote: "Recebemos proposta da SunOps também, e o preço deles ficou uns 20% abaixo do de vocês.",
+      },
+      {
+        text: "Ainda não validou tempo de resposta do suporte.",
+        severity: "risco",
+        atTimestamp: "01:15",
+        quote: "A SunOps é mais nova, não sei como é o tempo de resposta em caso de falha crítica numa usina.",
+      },
+    ],
+    buyingSignalDetails: [
+      { atTimestamp: "02:05", quote: "Se o suporte for realmente melhor, talvez valha pagar a diferença." },
+      { atTimestamp: "01:40", quote: "Posso te conectar com um cliente do setor de energia pra você validar isso na prática — isso ajudaria bastante." },
     ],
     nextSteps: [
       { text: "Preparar contraproposta com desconto de volume.", done: false, owner: "Ísis" },
@@ -369,6 +501,11 @@ export const calls: Call[] = [
     objectionsCount: 2,
     buyingSignalsCount: 0,
     signal: "risco",
+    longestMonologueSec: 128,
+    questionsPerHour: 3,
+    talkRatioByMinute: [62, 78, 71, 84, 69, 66],
+    dealValue: 140000,
+    forecastWeightPct: 6,
     pulse: pulseFrom([
       ["rep", 5], ["prospect", 1], ["rep", 4], ["prospect", 1], ["rep", 5], ["prospect", 1],
     ]),
@@ -379,8 +516,18 @@ export const calls: Call[] = [
       "Larissa participou por cortesia, não há intenção de avançar agora.",
     ],
     objections: [
-      { text: "Projeto despriorizado, sem verba até o próximo ano fiscal.", severity: "critica" },
-      { text: "Sem urgência declarada para os próximos 6 meses.", severity: "critica" },
+      {
+        text: "Projeto despriorizado, sem verba até o próximo ano fiscal.",
+        severity: "critica",
+        atTimestamp: "00:10",
+        quote: "Esse projeto foi despriorizado aqui internamente, não sei se faz sentido usarmos o tempo hoje.",
+      },
+      {
+        text: "Sem urgência declarada para os próximos 6 meses.",
+        severity: "critica",
+        atTimestamp: "00:40",
+        quote: "Não vai ter decisão nenhuma nos próximos meses, quero deixar isso claro.",
+      },
     ],
     nextSteps: [
       { text: "Marcar retomada de contato em janeiro, respeitando o timing dela.", done: false, owner: "Bruno" },
@@ -410,6 +557,8 @@ export const calls: Call[] = [
     objectionsCount: 0,
     buyingSignalsCount: 0,
     signal: null,
+    longestMonologueSec: 0,
+    questionsPerHour: 0,
     pulse: [],
     transcript: [
       { speaker: "rep", speakerName: "Camila Vasques", timestamp: "00:06", text: "Otávio, bom dia! Vamos começar falando um pouco do que motivou essa conversa hoje?" },
@@ -422,6 +571,33 @@ export const calls: Call[] = [
 
 export function getCallById(id: string): Call | undefined {
   return calls.find((c) => c.id === id);
+}
+
+/** Deriva os eventos da timeline (MomentTrack) a partir de objeções + sinais de compra. */
+export function deriveMoments(call: Call): Moment[] {
+  const moments: Moment[] = [];
+
+  for (const obj of call.objections ?? []) {
+    if (!obj.atTimestamp) continue;
+    const isPrice = /pre[çc]o|barat|20%|desconto|or[çc]amento|verba|corte/i.test(obj.text + obj.quote);
+    moments.push({
+      tSeconds: tsToSeconds(obj.atTimestamp),
+      type: obj.severity === "critica" ? "objecao-critica" : isPrice ? "preco" : "objecao",
+      quote: obj.quote ?? obj.text,
+      atTimestamp: obj.atTimestamp,
+    });
+  }
+
+  for (const sig of call.buyingSignalDetails ?? []) {
+    moments.push({
+      tSeconds: tsToSeconds(sig.atTimestamp),
+      type: "sinal",
+      quote: sig.quote,
+      atTimestamp: sig.atTimestamp,
+    });
+  }
+
+  return moments.sort((a, b) => a.tSeconds - b.tSeconds);
 }
 
 export const closers = Array.from(new Set(calls.map((c) => c.closer)));

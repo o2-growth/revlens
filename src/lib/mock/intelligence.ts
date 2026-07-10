@@ -1,7 +1,7 @@
 // Dados mock agregados — Painel de Inteligência Comercial.
 // Derivados/coerentes com as 8 calls de src/lib/mock/calls.ts (sem backend).
 
-import { calls } from "./calls";
+import { calls, getCallById } from "./calls";
 
 export type Direction = "up" | "down";
 export type Tone = "good" | "bad" | "neutral";
@@ -10,16 +10,22 @@ export type OperationMetric = {
   key: string;
   label: string;
   value: string;
+  numericValue: number; // pro count-up
+  unit?: string; // unidade rebaixada (%, etc.)
   colorClass: string;
   deltaLabel: string;
+  prevValueLabel: string; // "era X"
   direction: Direction;
   tone: Tone;
+  history: number[]; // 8 semanas, escala própria — sparkline de rodapé
+  toneColor: "oxy" | "risk" | "danger" | "muted";
 };
 
 export type WeeklyPoint = {
   weekLabel: string;
   calls: number;
   sentiment: number; // 0-100
+  future?: boolean; // ponto projetado (cone do forecast)
 };
 
 export type CloserRanking = {
@@ -29,6 +35,9 @@ export type CloserRanking = {
   talkRatio: number;
   buyingSignals: number;
   trend: Direction | "flat";
+  talkRatioTrend: number[]; // últimas N calls — escala fixa 0-100
+  vsTeamDelta: number; // pp vs. média do time (talk ratio)
+  outOfBand: boolean; // fora da faixa-alvo de um vital (âmbar)
 };
 
 export type ObjectionRankingItem = {
@@ -37,6 +46,32 @@ export type ObjectionRankingItem = {
   pctOfCalls: number;
 };
 
+// ── Fila de Intervenção (triagem de UTI) ──────────────────────────────────
+export type ReasonType =
+  | "SINGLE-THREADED"
+  | "CHAMPION INATIVO"
+  | "PREÇO SEM REAÇÃO"
+  | "SEM PRÓXIMO PASSO"
+  | "CONCORRENTE CITADO"
+  | "TALK-RATIO ALTO"
+  | "DEAL CONGELADO";
+
+export type InterventionItem = {
+  callId: string;
+  account: string;
+  closer: string;
+  severity: "risco" | "critica";
+  reasonType: ReasonType;
+  reasonDetail: string; // ex.: "12d" ou "4×"
+  evidence: string; // prova literal
+  evidenceTimestamp?: string; // recibo — deep-link pro turno
+  ageLabel: string; // "há 12 dias"
+  ageDays: number;
+  dealValue: number;
+  recommendedAction: string;
+};
+
+// Compat: tipo antigo ainda exportado (caso algo importe)
 export type AttentionItem = {
   callId: string;
   account: string;
@@ -51,6 +86,7 @@ export type BuyingSignalItem = {
   excerpt: string;
   closer: string;
   when: string;
+  atTimestamp?: string; // recibo
 };
 
 const readyCalls = calls.filter((c) => c.status === "pronto");
@@ -79,53 +115,74 @@ export const operationMetrics: OperationMetric[] = [
     key: "calls",
     label: "Calls na semana",
     value: String(totalCallsThisWeek),
+    numericValue: totalCallsThisWeek,
     colorClass: "text-rl-text",
     deltaLabel: `${pct(totalCallsThisWeek, prevWeek.calls) >= 0 ? "+" : ""}${pct(totalCallsThisWeek, prevWeek.calls)}%`,
+    prevValueLabel: `era ${prevWeek.calls}`,
     direction: totalCallsThisWeek >= prevWeek.calls ? "up" : "down",
     tone: "good",
+    toneColor: "oxy",
+    history: [5, 6, 7, 6, 9, 7, 6, 8],
   },
   {
     key: "talk-ratio",
     label: "Talk ratio médio",
     value: `${avgTalkRatio}%`,
+    numericValue: avgTalkRatio,
+    unit: "%",
     colorClass: avgTalkRatio >= 60 ? "text-rl-risk" : "text-rl-oxy",
     deltaLabel: `${pct(avgTalkRatio, prevWeek.talkRatio) >= 0 ? "+" : ""}${pct(avgTalkRatio, prevWeek.talkRatio)}%`,
+    prevValueLabel: `era ${prevWeek.talkRatio}%`,
     direction: avgTalkRatio >= prevWeek.talkRatio ? "up" : "down",
     // rep falando menos que a semana passada é bom (mais espaço pro prospect)
     tone: avgTalkRatio <= prevWeek.talkRatio ? "good" : "bad",
+    toneColor: avgTalkRatio >= 60 ? "risk" : "oxy",
+    history: [56, 59, 55, 61, 57, 60, 58, 52],
   },
   {
     key: "signals",
     label: "Sinais de compra",
     value: String(totalBuyingSignals),
+    numericValue: totalBuyingSignals,
     colorClass: "text-rl-oxy",
     deltaLabel: `${pct(totalBuyingSignals, prevWeek.signals) >= 0 ? "+" : ""}${pct(totalBuyingSignals, prevWeek.signals)}%`,
+    prevValueLabel: `era ${prevWeek.signals}`,
     direction: totalBuyingSignals >= prevWeek.signals ? "up" : "down",
     tone: "good",
+    toneColor: "oxy",
+    history: [7, 8, 6, 10, 8, 9, 9, 13],
   },
   {
     key: "risk",
     label: "Deals em risco",
     value: String(dealsAtRisk),
+    numericValue: dealsAtRisk,
     colorClass: dealsAtRisk >= 3 ? "text-rl-danger" : "text-rl-risk",
     deltaLabel: `${pct(dealsAtRisk, prevWeek.risk) >= 0 ? "+" : ""}${pct(dealsAtRisk, prevWeek.risk)}%`,
+    prevValueLabel: `era ${prevWeek.risk}`,
     direction: dealsAtRisk >= prevWeek.risk ? "up" : "down",
     tone: dealsAtRisk > prevWeek.risk ? "bad" : "good",
+    toneColor: dealsAtRisk >= 3 ? "danger" : "risk",
+    history: [3, 2, 3, 1, 2, 2, 2, 4],
   },
   {
     key: "sentiment",
     label: "Sentimento médio",
     value: String(sentimentHealth),
+    numericValue: sentimentHealth,
     colorClass:
       sentimentHealth >= 60 ? "text-rl-oxy" : sentimentHealth >= 40 ? "text-rl-risk" : "text-rl-danger",
     deltaLabel: `${pct(sentimentHealth, prevWeek.sentiment) >= 0 ? "+" : ""}${pct(sentimentHealth, prevWeek.sentiment)}%`,
+    prevValueLabel: `era ${prevWeek.sentiment}`,
     direction: sentimentHealth >= prevWeek.sentiment ? "up" : "down",
     tone: sentimentHealth >= prevWeek.sentiment ? "good" : "bad",
+    toneColor: sentimentHealth >= 60 ? "oxy" : sentimentHealth >= 40 ? "risk" : "danger",
+    history: [54, 57, 61, 59, 66, 63, 68, sentimentHealth],
   },
 ];
 
-// ── Pulso do comercial: série de 8 semanas (volume + sentimento) ─────────
-// Última semana (S0) bate com os agregados calculados acima.
+// ── Pulso do comercial: série de 8 semanas + 2 pontos projetados (cone) ───
+// Última semana histórica (Atual) bate com os agregados calculados acima.
 export const weeklyTrend: WeeklyPoint[] = [
   { weekLabel: "S-7", calls: 5, sentiment: 54 },
   { weekLabel: "S-6", calls: 6, sentiment: 57 },
@@ -135,7 +192,26 @@ export const weeklyTrend: WeeklyPoint[] = [
   { weekLabel: "S-2", calls: 7, sentiment: 63 },
   { weekLabel: "S-1", calls: prevWeek.calls, sentiment: prevWeek.sentiment },
   { weekLabel: "Atual", calls: totalCallsThisWeek, sentiment: sentimentHealth },
+  { weekLabel: "S+1", calls: 8, sentiment: 56, future: true },
+  { weekLabel: "S+2", calls: 8, sentiment: 53, future: true },
 ];
+
+// Banda de incerteza do forecast (best/worst por semana projetada) — abre com o tempo
+export const forecastBand = {
+  commit: [sentimentHealth, 56, 53], // Atual, S+1, S+2 (linha central)
+  best: [sentimentHealth, 63, 66],
+  worst: [sentimentHealth, 49, 43],
+  healthyFloor: 55, // faixa saudável mínima
+};
+
+// ── Forecast do trimestre (oxímetro projetado) ────────────────────────────
+export const forecast = {
+  commit: 2_450_000,
+  best: 3_100_000,
+  worst: 1_780_000,
+  confidence: 64, // %
+  quota: 3_000_000,
+};
 
 // ── Ranking do time (derivado por closer a partir das calls prontas) ─────
 export const teamRanking: CloserRanking[] = (() => {
@@ -146,6 +222,8 @@ export const teamRanking: CloserRanking[] = (() => {
     byCloser.set(c.closer, list);
   }
 
+  const teamAvgTalk = avgTalkRatio;
+
   return Array.from(byCloser.entries())
     .map(([name, list]) => {
       const talkRatio = Math.round(list.reduce((s, c) => s + c.talkRatioRep, 0) / list.length);
@@ -154,6 +232,10 @@ export const teamRanking: CloserRanking[] = (() => {
       const negatives = list.filter((c) => c.signal === "risco").length;
       const trend: Direction | "flat" =
         positives > negatives ? "up" : positives < negatives ? "down" : "flat";
+      // trend de talk-ratio por call (cronológico), escala fixa 0-100
+      const talkRatioTrend = [...list]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .map((c) => c.talkRatioRep);
       return {
         name,
         initials: list[0].closerInitials,
@@ -161,6 +243,9 @@ export const teamRanking: CloserRanking[] = (() => {
         talkRatio,
         buyingSignals,
         trend,
+        talkRatioTrend,
+        vsTeamDelta: talkRatio - teamAvgTalk,
+        outOfBand: talkRatio >= 60, // fora da faixa saudável de talk-ratio
       };
     })
     .sort((a, b) => b.buyingSignals - a.buyingSignals);
@@ -175,39 +260,121 @@ export const objectionRanking: ObjectionRankingItem[] = [
   { text: "Resistência interna da equipe", count: 1, pctOfCalls: 14 },
 ];
 
-// ── Precisa de atenção (deals em risco, acionável) ────────────────────────
-export const attentionList: AttentionItem[] = [
+// ── Fila de Intervenção (prescritiva, ordenada por severidade × valor × recência) ──
+const rawInterventions: InterventionItem[] = [
   {
     callId: "cl-8839",
     account: "Cedro Farmacêutica",
     closer: "Camila Vasques",
-    reason: "Objeção crítica sem resposta: contrato vigente + corte de orçamento",
     severity: "critica",
-  },
-  {
-    callId: "cl-8819",
-    account: "Multivix Educação",
-    closer: "Bruno Kellner",
-    reason: "Projeto despriorizado — decisor sem urgência declarada",
-    severity: "critica",
+    reasonType: "TALK-RATIO ALTO",
+    reasonDetail: "68%",
+    evidence: "Rep falou 68% do tempo — três objeções ficaram sem resposta com dado.",
+    evidenceTimestamp: "03:10",
+    ageLabel: "há 1 dia",
+    ageDays: 1,
+    dealValue: 320000,
+    recommendedAction: "Reabrir com descoberta",
   },
   {
     callId: "cl-8825",
     account: "Solaris Energia Renovável",
     closer: "Ísis Nogueira",
-    reason: "Objeção de preço aberta, contraproposta ainda não enviada",
+    severity: "critica",
+    reasonType: "PREÇO SEM REAÇÃO",
+    reasonDetail: "20%",
+    evidence: "SunOps 20% abaixo; contraproposta prometida e ainda não enviada.",
+    evidenceTimestamp: "00:24",
+    ageLabel: "há 3 dias",
+    ageDays: 3,
+    dealValue: 410000,
+    recommendedAction: "Enviar contraproposta",
+  },
+  {
+    callId: "cl-8841",
+    account: "Nortex Logística",
+    closer: "Bruno Kellner",
     severity: "risco",
+    reasonType: "CHAMPION INATIVO",
+    reasonDetail: "sem CTO",
+    evidence: "Decisão em comitê, mas o CTO (Ricardo) nunca entrou numa call.",
+    evidenceTimestamp: "03:30",
+    ageLabel: "hoje",
+    ageDays: 0,
+    dealValue: 480000,
+    recommendedAction: "Puxar CTO pra call",
   },
   {
     callId: "cl-8834",
     account: "Altiplano Seguros",
     closer: "Ísis Nogueira",
-    reason: "Decisor final (CISO) ainda não engajado na conversa",
     severity: "risco",
+    reasonType: "SINGLE-THREADED",
+    reasonDetail: "1 contato",
+    evidence: "Decisor final (CISO) ainda não engajado — só o gerente de TI na call.",
+    evidenceTimestamp: "01:45",
+    ageLabel: "há 2 dias",
+    ageDays: 2,
+    dealValue: 260000,
+    recommendedAction: "Marcar call com CISO",
+  },
+  {
+    callId: "cl-8819",
+    account: "Multivix Educação",
+    closer: "Bruno Kellner",
+    severity: "critica",
+    reasonType: "DEAL CONGELADO",
+    reasonDetail: "sem verba",
+    evidence: "Projeto despriorizado, sem verba até o próximo ano fiscal.",
+    evidenceTimestamp: "00:10",
+    ageLabel: "há 4 dias",
+    ageDays: 4,
+    dealValue: 140000,
+    recommendedAction: "Reativar em janeiro",
   },
 ];
 
-// ── Sinais de compra recentes ──────────────────────────────────────────────
+// score de triagem: severidade (peso 3) + valor do deal (normalizado) − idade
+const maxDeal = Math.max(...rawInterventions.map((i) => i.dealValue));
+export const interventionQueue: InterventionItem[] = [...rawInterventions].sort((a, b) => {
+  const score = (i: InterventionItem) =>
+    (i.severity === "critica" ? 3 : 1) * 100 +
+    (i.dealValue / maxDeal) * 60 -
+    i.ageDays * 4;
+  return score(b) - score(a);
+});
+
+// Compat com o tipo antigo (não usado pelo novo Painel, mantido por segurança)
+export const attentionList: AttentionItem[] = interventionQueue.map((i) => ({
+  callId: i.callId,
+  account: i.account,
+  closer: i.closer,
+  reason: i.evidence,
+  severity: i.severity,
+}));
+
+// ── "Desde ontem" — faixa densa de mudanças (cada item tem número atrás) ──
+export type SinceYesterdayItem = {
+  label: string;
+  tone: "oxy" | "risk" | "danger" | "neutral";
+  direction?: Direction;
+  callId?: string;
+};
+
+export const sinceYesterday: {
+  headline: string;
+  items: SinceYesterdayItem[];
+} = {
+  headline: "DOIS DEALS ESCORREGARAM ONTEM. O TIME FALA 6PP ACIMA DA FAIXA.",
+  items: [
+    { label: "+4 sinais de compra", tone: "oxy", direction: "up" },
+    { label: "2 deals → risco", tone: "danger", direction: "up", callId: "cl-8839" },
+    { label: "talk ratio 58%→52%", tone: "oxy", direction: "down" },
+    { label: "Nortex: CTO ainda ausente", tone: "risk", callId: "cl-8841" },
+  ],
+};
+
+// ── Sinais de compra recentes (com recibo) ────────────────────────────────
 export const buyingSignals: BuyingSignalItem[] = [
   {
     callId: "cl-8837",
@@ -215,6 +382,7 @@ export const buyingSignals: BuyingSignalItem[] = [
     excerpt: "Se vocês me mandarem uma proposta formal essa semana, eu levo pro comitê na sexta.",
     closer: "Bruno Kellner",
     when: "09/07 · 11:00",
+    atTimestamp: "01:58",
   },
   {
     callId: "cl-8841",
@@ -222,6 +390,7 @@ export const buyingSignals: BuyingSignalItem[] = [
     excerpt: "Budget de Q3 já aprovado pela diretoria — não é mais objeção de preço.",
     closer: "Bruno Kellner",
     when: "10/07 · 09:15",
+    atTimestamp: "04:20",
   },
   {
     callId: "cl-8830",
@@ -229,6 +398,7 @@ export const buyingSignals: BuyingSignalItem[] = [
     excerpt: "Se resolver essa parte de adoção, orçamento não vai ser problema.",
     closer: "Camila Vasques",
     when: "08/07 · 10:00",
+    atTimestamp: "02:35",
   },
   {
     callId: "cl-8834",
@@ -236,5 +406,9 @@ export const buyingSignals: BuyingSignalItem[] = [
     excerpt: "Se a documentação estiver em ordem, me sinto confortável em recomendar avançar.",
     closer: "Ísis Nogueira",
     when: "08/07 · 16:20",
+    atTimestamp: "02:20",
   },
 ];
+
+// util pequeno para outras telas
+export { getCallById };

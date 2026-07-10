@@ -35,7 +35,13 @@
   --color-rl-risk: #f5b851;        /* âmbar — risco / atenção */
   --color-rl-risk-dim: rgba(245, 184, 81, 0.13);
   --color-rl-danger: #ff6b6b;      /* vermelho — objeção crítica / perdido */
+  --color-rl-danger-dim: rgba(255, 107, 107, 0.12);
   --color-rl-prospect: #6ba8a0;    /* fala do prospect (teal frio, contrasta c/ o verde do rep) */
+  --color-rl-prospect-dim: rgba(107, 168, 160, 0.14);
+
+  /* ── Faixa-alvo / zona saudável (oxímetro tem faixa marcada) ── */
+  --color-rl-oxy-band: rgba(108, 242, 105, 0.10);   /* fundo da zona-alvo em barras/bands */
+  --color-rl-oxy-trail: rgba(108, 242, 105, 0.25);  /* rastro do playhead (stroke vivo) */
 
   /* ── Tipografia (variáveis vindas do next/font em layout.tsx) ── */
   --font-display: var(--font-anton), "Arial Narrow", sans-serif; /* momentos display */
@@ -91,4 +97,158 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-rl-oxy);
   outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOVIMENTO — pontuação clínica, não animação. Hierarquia rígida.
+   Tudo governado por prefers-reduced-motion (assenta no valor final).
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --rl-ease-out: cubic-bezier(0.16, 1, 0.3, 1);   /* "assentar" — draw, morph, enter */
+  --rl-ease-press: cubic-bezier(0.4, 0, 0.2, 1);   /* press físico */
+  --rl-dur-fast: 100ms;    /* press, toggles */
+  --rl-dur-hover: 150ms;   /* hover choreography (teto 160ms em lista) */
+  --rl-dur-enter: 280ms;   /* stagger item */
+  --rl-dur-draw: 800ms;    /* line-drawing do pulse/forecast */
+  --rl-dur-count: 700ms;   /* count-up readout */
+  --rl-dur-morph: 320ms;   /* view-transition-group */
+}
+
+/* ── Layering — linha-de-luz de 1px (volume sem drop-shadow) ── */
+.rl-raised {
+  border: 1px solid var(--color-rl-border);
+  box-shadow: inset 0 1px 0 0 rgba(230, 255, 240, 0.06); /* quina de luz no topo */
+}
+
+/* ── Readout herói: tracking um pouco mais negativo que o base ── */
+.rl-readout-hero {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Kbd: chip de atalho ── */
+.rl-kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--color-rl-border);
+  background: var(--color-rl-inset);
+  color: var(--color-rl-text-3);
+}
+
+/* ══════ CAMADA 1 — "LIGAR" (one-shot no mount) ══════ */
+
+/* Line-drawing do pulse/forecast */
+.rl-trace {
+  stroke-dasharray: 2000;
+  animation: rl-draw var(--rl-dur-draw) var(--rl-ease-out) both;
+}
+@keyframes rl-draw {
+  from { stroke-dashoffset: 2000; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Stagger de entrada dos feeds — cap em 10 pra o fim não ficar lento */
+.rl-enter {
+  opacity: 0;
+  animation: rl-in var(--rl-dur-enter) var(--rl-ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 10) * 40ms);
+}
+@keyframes rl-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════ CAMADA 2 — "AO VIVO" (os DOIS ÚNICOS loops permitidos) ══════ */
+
+/* Shimmer-sweep (processando) — significa "gerando sinais", zero spinner */
+.rl-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.rl-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(108, 242, 105, 0.06) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: rl-shimmer 1.6s linear infinite;
+}
+@keyframes rl-shimmer {
+  to { transform: translateX(100%); }
+}
+
+/* Glow vivo do playhead (o único glow em movimento da tela) */
+.rl-live-glow {
+  filter: drop-shadow(0 0 5px rgba(108, 242, 105, 0.55));
+}
+
+/* Flatline blip (oxímetro calibrando — call processando) */
+.rl-blip {
+  animation: rl-blip 1.8s var(--rl-ease-out) infinite;
+}
+@keyframes rl-blip {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* ══════ CAMADA 3 — "RESPONDER" (input) ══════ */
+
+/* Ping de chegada (evento único: call processando → pronta com sinal) */
+.rl-ping {
+  animation: rl-ping 0.7s ease-out 1;
+}
+@keyframes rl-ping {
+  from { box-shadow: 0 0 0 0 var(--color-rl-oxy-dim); }
+  to { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* Press físico */
+.rl-press {
+  transition: transform var(--rl-dur-fast) var(--rl-ease-press),
+    box-shadow var(--rl-dur-fast) var(--rl-ease-press);
+}
+.rl-press:active {
+  transform: scale(0.98) translateY(1px);
+}
+
+/* Count-up: opacidade estável (o número vem do JS; classe marca "medição viva") */
+.rl-measuring {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Toast (apito do monitor) */
+.rl-toast {
+  animation: rl-toast-in 400ms var(--rl-ease-out) both;
+}
+@keyframes rl-toast-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* View Transitions — morph de navegação (progressive enhancement) */
+::view-transition-group(*) {
+  animation-duration: var(--rl-dur-morph);
+  animation-timing-function: var(--rl-ease-out);
+}
+
+/* ══════ REDUCED MOTION — desliga tudo, assenta no valor final ══════ */
+@media (prefers-reduced-motion: reduce) {
+  .rl-trace { stroke-dasharray: none; animation: none; }
+  .rl-enter { opacity: 1; animation: none; transform: none; }
+  .rl-shimmer::after { animation: none; display: none; }
+  .rl-blip { animation: none; opacity: 1; }
+  .rl-ping { animation: none; }
+  .rl-toast { animation: none; }
+  .rl-press { transition: none; }
+  .rl-live-glow { filter: none; }
+  * { view-transition-name: none !important; }
 }
