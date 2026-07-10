@@ -71,7 +71,7 @@ export default async function CallPage({
               </span>
             </span>
           </div>
-          <PulseWave segments={call.pulse} variant="large" className="h-20 w-full" />
+          <PulseWave segments={call.pulse} variant="large" seed={call.id} className="h-20 w-full" />
           <div className="mt-1 flex justify-between text-[10px] text-rl-text-muted">
             <span className="rl-readout">00:00</span>
             <span className="rl-readout">{call.durationLabel}</span>

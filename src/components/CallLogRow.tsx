@@ -36,7 +36,7 @@ export function CallLogRow({ call }: CallLogRowProps) {
       </div>
 
       <div className="hidden h-6 sm:block">
-        <PulseWave segments={call.pulse} variant="sparkline" />
+        <PulseWave segments={call.pulse} variant="sparkline" seed={call.id} />
       </div>
 
       <div>

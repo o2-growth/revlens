@@ -17,6 +17,20 @@ function O2Mark() {
   );
 }
 
+function PainelIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden>
+      <path
+        d="M2 9.5h2.5l1.8-4.5 2.4 8 1.8-5.5 1.3 2h3.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function CallsIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden>
@@ -67,6 +81,7 @@ function PipelineIcon() {
 }
 
 const navItems = [
+  { href: "/", label: "Painel", icon: PainelIcon, disabled: false },
   { href: "/calls", label: "Calls", icon: CallsIcon, disabled: false },
   { href: "/search", label: "Busca", icon: SearchIcon, disabled: false },
   { href: "#", label: "Coaching", icon: CoachingIcon, disabled: true },
@@ -86,7 +101,12 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-2">
         <ul className="flex flex-col gap-0.5">
           {navItems.map((item) => {
-            const isActive = activePath.startsWith(item.href) && item.href !== "#";
+            const isActive =
+              item.href === "#"
+                ? false
+                : item.href === "/"
+                  ? activePath === "/"
+                  : activePath.startsWith(item.href);
             const Icon = item.icon;
 
             if (item.disabled) {
