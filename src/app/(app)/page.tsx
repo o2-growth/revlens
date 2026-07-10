@@ -1,4 +1,5 @@
 import { PeriodToggle } from "@/components/PeriodToggle";
+import { Topbar } from "@/components/Topbar";
 import { LeaderBriefing } from "@/components/LeaderBriefing";
 import { OperationVitals } from "@/components/OperationVitals";
 import { TrendChart } from "@/components/TrendChart";
@@ -19,13 +20,7 @@ import {
 export default function PainelPage() {
   return (
     <div className="flex-1 overflow-y-auto">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-rl-border px-8 py-6">
-        <div>
-          <h1 className="rl-display text-3xl text-rl-text">Painel</h1>
-          <p className="mt-1 text-sm text-rl-text-3">Gabriela Costa · Gestor</p>
-        </div>
-        <PeriodToggle />
-      </header>
+      <Topbar title="Painel" subtitle="Gabriela Costa · Gestor" right={<PeriodToggle />} />
 
       <div className="flex flex-col gap-6 px-8 py-6">
         <LeaderBriefing headline={sinceYesterday.headline} items={sinceYesterday.items} />
