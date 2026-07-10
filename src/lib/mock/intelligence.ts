@@ -6,6 +6,7 @@ import {
   deals,
   openDeals,
   wonDeals,
+  lostDeals,
   dealExpectedValue,
   dealsAtRisk,
   valueAtRisk,
@@ -92,6 +93,10 @@ export type CompetitorPressure = {
 };
 
 // ── Composição do commit (bridge pra quota) ───────────────────────────────
+// Motivo pelo qual um deal NÃO sustenta o commit ponderado — mesma semântica
+// verde/âmbar/vermelho do Ganhos × Perdidos, aplicada à transparência de exclusão.
+export type OutOfCommitReason = "estagio-inicial" | "sem-proximo-passo" | "esfriando" | "perdido";
+
 export type CommitDealLine = {
   dealId: string;
   account: string;
@@ -102,6 +107,19 @@ export type CommitDealLine = {
   stage: string;
   inQueue: boolean;
   momentum: Deal["momentum"];
+  /** ganho (booked) — sustenta o commit a 100%, chip verde "booked" */
+  booked: boolean;
+  /** null = sustenta o commit; caso contrário, o motivo pelo qual está fora */
+  outOfCommitReason: OutOfCommitReason | null;
+};
+
+export type OutOfCommitGroup = {
+  reason: OutOfCommitReason;
+  label: string;
+  tone: "risk" | "danger";
+  count: number;
+  /** soma do valor bruto (não ponderado) — dinheiro que não é contado com confiança */
+  value: number;
 };
 
 // ── Drivers da confiança do forecast (explica o número black-box) ─────────
@@ -161,6 +179,14 @@ export type BuyingSignalItem = {
 };
 
 const readyCalls = calls.filter((c) => c.status === "pronto");
+// calls "processando" ainda não geraram talk-ratio/sentimento — excluídas dos vitais
+// de qualidade de call (não da contagem bruta). Explicitado na sub-legenda pra não
+// parecer que o número "sumiu" alguém.
+const processingCount = calls.length - readyCalls.length; // 1 (Bravium)
+const processingNote =
+  processingCount > 0
+    ? `exclui ${processingCount} processando`
+    : undefined;
 
 // ── Vitais da operação (semana atual vs. semana passada) ─────────────────
 const totalCallsThisWeek = calls.length; // 8
@@ -220,6 +246,7 @@ export const operationMetrics: OperationMetric[] = [
     value: `${avgTalkRatio}%`,
     numericValue: avgTalkRatio,
     unit: "%",
+    subLegend: processingNote,
     colorClass: avgTalkRatio >= 60 ? "text-rl-risk" : "text-rl-oxy",
     deltaLabel: `${pct(avgTalkRatio, prevWeek.talkRatio) >= 0 ? "+" : ""}${pct(avgTalkRatio, prevWeek.talkRatio)}%`,
     prevValueLabel: `era ${prevWeek.talkRatio}%`,
@@ -281,6 +308,7 @@ export const operationMetrics: OperationMetric[] = [
     label: "Sentimento médio",
     value: String(sentimentHealth),
     numericValue: sentimentHealth,
+    subLegend: processingNote,
     colorClass:
       sentimentHealth >= 60 ? "text-rl-oxy" : sentimentHealth >= 40 ? "text-rl-risk" : "text-rl-danger",
     deltaLabel: `${pct(sentimentHealth, prevWeek.sentiment) >= 0 ? "+" : ""}${pct(sentimentHealth, prevWeek.sentiment)}%`,
@@ -389,27 +417,81 @@ export const forecastDrivers: ForecastDriver[] = [
   },
 ];
 
-// ── Composição do commit (bridge pra quota) — "o gap é fechado por QUAIS deals?" ──
+// ── Composição do commit (bridge pra quota) — "o gap é fechado por QUAIS deals?
+// e por que NÃO é fechado pelos outros?" ──────────────────────────────────
 const inQueueAccounts = new Set(dealsAtRisk.map((d) => d.account));
+
+// Motivo pelo qual um deal ABERTO não sustenta o commit com confiança — ordem de
+// prioridade: probabilidade estrutural (estágio) > falta de ação agendada > momentum.
+// Deals ganhos entram como "booked" (100%); deals perdidos como "perdido" (vermelho).
+function outOfCommitReasonFor(d: Deal): OutOfCommitReason | null {
+  if (d.stage === "descoberta") return "estagio-inicial";
+  if (!d.hasNextStep) return "sem-proximo-passo";
+  if (d.momentum === "esfriando" || d.momentum === "estagnado") return "esfriando";
+  return null;
+}
+
+function toCommitLine(d: Deal, reason: OutOfCommitReason | null, booked: boolean): CommitDealLine {
+  return {
+    dealId: d.id,
+    account: d.account,
+    callId: d.primaryCallId,
+    rawValue: d.dealValue,
+    weightedValue: booked ? d.dealValue : reason === "perdido" ? 0 : Math.round(dealExpectedValue(d)),
+    probability: booked ? 1 : reason === "perdido" ? 0 : stageProbability[d.stage],
+    stage: d.stage,
+    inQueue: inQueueAccounts.has(d.account),
+    momentum: d.momentum,
+    booked,
+    outOfCommitReason: reason,
+  };
+}
+
+const bookedLines = wonDeals.map((d) => toCommitLine(d, null, true));
+const openLines = openDeals.map((d) => toCommitLine(d, outOfCommitReasonFor(d), false));
+const lostLines = lostDeals.map((d) => toCommitLine(d, "perdido", false));
+
+const outOfCommitLines = [...openLines.filter((l) => l.outOfCommitReason !== null), ...lostLines];
+
+const outOfCommitReasonMeta: Record<OutOfCommitReason, { label: string; tone: "risk" | "danger" }> = {
+  "estagio-inicial": { label: "estágio inicial", tone: "risk" },
+  "sem-proximo-passo": { label: "sem próximo passo", tone: "risk" },
+  esfriando: { label: "esfriando / estagnado", tone: "risk" },
+  perdido: { label: "perdido", tone: "danger" },
+};
+const outOfCommitOrder: OutOfCommitReason[] = [
+  "estagio-inicial",
+  "sem-proximo-passo",
+  "esfriando",
+  "perdido",
+];
+
 export const commitComposition = {
   quota: QUOTA,
   commit: Math.round(commitValue),
   booked: Math.round(bookedValue),
   weightedPipeline: Math.round(weightedPipeline),
   gapToQuota: Math.round(QUOTA - commitValue),
-  deals: openDeals
-    .map<CommitDealLine>((d) => ({
-      dealId: d.id,
-      account: d.account,
-      callId: d.primaryCallId,
-      rawValue: d.dealValue,
-      weightedValue: Math.round(dealExpectedValue(d)),
-      probability: stageProbability[d.stage],
-      stage: d.stage,
-      inQueue: inQueueAccounts.has(d.account),
-      momentum: d.momentum,
-    }))
-    .sort((a, b) => b.weightedValue - a.weightedValue),
+  // deals que sustentam o commit: ganhos (booked) + abertos sem motivo de exclusão
+  deals: [...bookedLines, ...openLines.filter((l) => l.outOfCommitReason === null)].sort(
+    (a, b) => b.weightedValue - a.weightedValue,
+  ),
+  // fora do commit ponderado: abertos com motivo + perdidos recentes — transparência de exclusão
+  outOfCommit: [...outOfCommitLines].sort((a, b) => b.rawValue - a.rawValue),
+  outOfCommitGroups: outOfCommitOrder
+    .map<OutOfCommitGroup | null>((reason) => {
+      const matching = outOfCommitLines.filter((l) => l.outOfCommitReason === reason);
+      if (matching.length === 0) return null;
+      return {
+        reason,
+        label: outOfCommitReasonMeta[reason].label,
+        tone: outOfCommitReasonMeta[reason].tone,
+        count: matching.length,
+        value: matching.reduce((s, l) => s + l.rawValue, 0),
+      };
+    })
+    .filter((g): g is OutOfCommitGroup => g !== null),
+  outOfCommitValue: outOfCommitLines.reduce((s, l) => s + l.rawValue, 0),
 };
 
 // Prescrição de coaching por closer — derivada do vital fora de faixa, com recibo.

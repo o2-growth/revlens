@@ -43,6 +43,9 @@ export default function PainelPage() {
             weightedPipeline={commitComposition.weightedPipeline}
             gapToQuota={commitComposition.gapToQuota}
             deals={commitComposition.deals}
+            outOfCommit={commitComposition.outOfCommit}
+            outOfCommitGroups={commitComposition.outOfCommitGroups}
+            outOfCommitValue={commitComposition.outOfCommitValue}
           />
         </div>
 

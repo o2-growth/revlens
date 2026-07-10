@@ -52,6 +52,10 @@ export type Deal = {
   outcome: CallOutcome;
   /** call mais recente do deal — recibo padrão pra deep-link */
   primaryCallId: string;
+  /** próximo passo CONCRETO agendado (ação com dono + data) — mesmo critério do
+   * `callsWithoutNextStep` em intelligence.ts. Sem isso, o deal não sustenta o commit
+   * com confiança, mesmo que o estágio pareça avançado. */
+  hasNextStep: boolean;
 };
 
 // Metadados de deal por conta (enrichment intencional e coerente com o conteúdo das calls).
@@ -65,6 +69,9 @@ type DealMeta = {
   momentumTrend: number[];
   /** fallback de valor quando a call não traz dealValue (ex.: call ainda processando) */
   dealValueFallback?: number;
+  /** próximo passo concreto (ação com dono + data) agendado? default true — só cai pra
+   * false nas contas sem ação marcada (mesma curadoria do noNextStep em intelligence.ts). */
+  hasNextStep?: boolean;
 };
 
 const dealMetaByAccount: Record<string, DealMeta> = {
@@ -86,6 +93,7 @@ const dealMetaByAccount: Record<string, DealMeta> = {
     threadCount: 1,
     momentum: "esfriando",
     momentumTrend: [62, 55, 48, 40, 30, 18],
+    hasNextStep: false,
   },
   // Pediu proposta antes do rep sugerir. Ganho, aquecendo.
   "Vórtice Alimentos": {
@@ -131,6 +139,7 @@ const dealMetaByAccount: Record<string, DealMeta> = {
     threadCount: 1,
     momentum: "esfriando",
     momentumTrend: [45, 38, 30, 24, 18, 12],
+    hasNextStep: false,
   },
   // Call ainda processando — descoberta recém-aberta, estagnado até gerar sinais.
   "Bravium Construtora": {
@@ -141,6 +150,7 @@ const dealMetaByAccount: Record<string, DealMeta> = {
     momentum: "estagnado",
     momentumTrend: [50, 50, 50, 50, 50, 50],
     dealValueFallback: 200000,
+    hasNextStep: false,
   },
 };
 
@@ -186,6 +196,7 @@ export const deals: Deal[] = (() => {
       callIds: sorted.map((c) => c.id),
       outcome: latest.outcome,
       primaryCallId: latest.id,
+      hasNextStep: meta?.hasNextStep ?? true,
     };
   });
 })();
