@@ -46,6 +46,9 @@ export type Moment = {
   atTimestamp: string;
 };
 
+/** Resultado atribuído manualmente pelo closer/gestor (hoje manual, futuro liga no Pipefy). */
+export type CallOutcome = "ganho" | "perdido" | "aberto";
+
 export type Call = {
   id: string;
   account: string;
@@ -64,6 +67,8 @@ export type Call = {
   objectionsCount: number;
   buyingSignalsCount: number;
   signal: "sinal" | "risco" | null;
+  /** atribuição manual de resultado — ganha/perde/em aberto (ver OutcomeControl) */
+  outcome: CallOutcome;
   pulse: PulseSegment[];
   /** vitais de coaching — só significam contra a norma */
   longestMonologueSec: number;
@@ -110,6 +115,7 @@ export const calls: Call[] = [
     objectionsCount: 1,
     buyingSignalsCount: 3,
     signal: "sinal",
+    outcome: "aberto",
     longestMonologueSec: 74,
     questionsPerHour: 14,
     talkRatioByMinute: [52, 60, 44, 41, 38, 55, 47, 43, 49, 45],
@@ -179,6 +185,7 @@ export const calls: Call[] = [
     objectionsCount: 3,
     buyingSignalsCount: 0,
     signal: "risco",
+    outcome: "perdido",
     longestMonologueSec: 156,
     questionsPerHour: 4,
     talkRatioByMinute: [70, 82, 88, 74, 91, 66, 72, 60],
@@ -250,6 +257,7 @@ export const calls: Call[] = [
     objectionsCount: 0,
     buyingSignalsCount: 5,
     signal: "sinal",
+    outcome: "ganho",
     longestMonologueSec: 48,
     questionsPerHour: 18,
     talkRatioByMinute: [42, 38, 33, 40, 36, 44, 35, 39, 37, 41],
@@ -310,6 +318,7 @@ export const calls: Call[] = [
     objectionsCount: 2,
     buyingSignalsCount: 1,
     signal: "risco",
+    outcome: "aberto",
     longestMonologueSec: 92,
     questionsPerHour: 9,
     talkRatioByMinute: [50, 58, 62, 54, 49, 56, 60, 52],
@@ -376,6 +385,7 @@ export const calls: Call[] = [
     objectionsCount: 1,
     buyingSignalsCount: 2,
     signal: "sinal",
+    outcome: "ganho",
     longestMonologueSec: 58,
     questionsPerHour: 15,
     talkRatioByMinute: [46, 42, 48, 40, 45, 43],
@@ -436,6 +446,7 @@ export const calls: Call[] = [
     objectionsCount: 2,
     buyingSignalsCount: 2,
     signal: "risco",
+    outcome: "aberto",
     longestMonologueSec: 68,
     questionsPerHour: 11,
     talkRatioByMinute: [48, 54, 50, 46, 53, 49, 55, 47],
@@ -501,6 +512,7 @@ export const calls: Call[] = [
     objectionsCount: 2,
     buyingSignalsCount: 0,
     signal: "risco",
+    outcome: "perdido",
     longestMonologueSec: 128,
     questionsPerHour: 3,
     talkRatioByMinute: [62, 78, 71, 84, 69, 66],
@@ -557,6 +569,7 @@ export const calls: Call[] = [
     objectionsCount: 0,
     buyingSignalsCount: 0,
     signal: null,
+    outcome: "aberto",
     longestMonologueSec: 0,
     questionsPerHour: 0,
     pulse: [],
