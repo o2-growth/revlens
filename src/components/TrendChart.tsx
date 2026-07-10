@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { WeeklyPoint } from "@/lib/mock/intelligence";
 import { forecastBand, forecast } from "@/lib/mock/intelligence";
 
@@ -5,16 +8,49 @@ type TrendChartProps = {
   data: WeeklyPoint[];
 };
 
-const WIDTH = 900;
+const DEFAULT_WIDTH = 900;
 const CHART_HEIGHT = 168;
 const LABEL_HEIGHT = 26;
 const HEIGHT = CHART_HEIGHT + LABEL_HEIGHT;
+const ASPECT = HEIGHT / DEFAULT_WIDTH;
 
 function formatMi(v: number) {
   return `${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Mi`;
 }
 
+/** Verde só acima do piso de confiança real — não decorativo (mesma disciplina do Delta). */
+function confidenceTone(pct: number): "oxy" | "risk" | "danger" {
+  if (pct >= 75) return "oxy";
+  if (pct >= 55) return "risk";
+  return "danger";
+}
+const confidenceClass: Record<ReturnType<typeof confidenceTone>, string> = {
+  oxy: "text-rl-oxy",
+  risk: "text-rl-risk",
+  danger: "text-rl-danger",
+};
+
 export function TrendChart({ data }: TrendChartProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // largura medida do container — mantém o viewBox no MESMO aspect ratio do
+  // elemento renderizado, então círculos ficam redondos e o stroke uniforme
+  // (sem preserveAspectRatio="none" esticando eixos em taxas diferentes).
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const WIDTH = width;
+  const renderHeight = WIDTH * ASPECT;
+
   const maxCalls = Math.max(...data.map((d) => d.calls));
   const slot = WIDTH / data.length;
   const yOf = (sentiment: number) => CHART_HEIGHT - (sentiment / 100) * (CHART_HEIGHT - 12) - 6;
@@ -44,6 +80,7 @@ export function TrendChart({ data }: TrendChartProps) {
   const bandBottomY = yOf(floor);
 
   const confPct = forecast.confidence;
+  const tone = confidenceTone(confPct);
 
   return (
     <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-5">
@@ -53,10 +90,10 @@ export function TrendChart({ data }: TrendChartProps) {
             Linha do horizonte · sentimento + forecast
           </span>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="rl-readout-hero text-lg text-rl-oxy">R$ {formatMi(forecast.commit)}</span>
+            <span className={`rl-readout-hero text-lg ${confidenceClass[tone]}`}>R$ {formatMi(forecast.commit)}</span>
             <span className="rl-readout text-[11px] text-rl-text-3">commit do trimestre</span>
             <span className="rl-readout text-[11px] text-rl-text-2">
-              · confiança <span className="text-rl-oxy">{confPct}%</span>
+              · confiança <span className={confidenceClass[tone]}>{confPct}%</span>
             </span>
           </div>
         </div>
@@ -73,14 +110,16 @@ export function TrendChart({ data }: TrendChartProps) {
         </span>
       </div>
 
-      <svg
-        width="100%"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        preserveAspectRatio="none"
-        className="h-56 w-full"
-        role="img"
-        aria-label="Sentimento das últimas 8 semanas continuado por um cone de forecast; faixa saudável marcada e linha 'agora' destacada"
-      >
+      <div ref={containerRef} className="w-full">
+        <svg
+          width="100%"
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ height: renderHeight, display: "block" }}
+          className="w-full"
+          role="img"
+          aria-label="Sentimento das últimas 8 semanas continuado por um cone de forecast; faixa saudável marcada e linha 'agora' destacada"
+        >
         <defs>
           <linearGradient id="rl-redline" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-rl-oxy)" stopOpacity="0" />
@@ -147,9 +186,10 @@ export function TrendChart({ data }: TrendChartProps) {
           <circle key={`cpt-${k}`} cx={p.x} cy={p.y} r={2} fill={p.v < floor ? "var(--color-rl-risk)" : "var(--color-rl-oxy)"} opacity={k === 0 ? 0 : 0.9} />
         ))}
 
-        {/* linha histórica — traço único que se desenha */}
+        {/* linha histórica — traço único que se desenha (pathLength normalizado) */}
         <polyline
           className="rl-trace"
+          pathLength={1}
           points={histPath}
           fill="none"
           stroke="var(--color-rl-oxy)"
@@ -188,7 +228,8 @@ export function TrendChart({ data }: TrendChartProps) {
             {d.weekLabel}
           </text>
         ))}
-      </svg>
+        </svg>
+      </div>
     </div>
   );
 }

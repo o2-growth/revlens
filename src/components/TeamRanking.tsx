@@ -5,23 +5,30 @@ type TeamRankingProps = {
   items: CloserRanking[];
 };
 
-function TrendGlyph({ trend }: { trend: CloserRanking["trend"] }) {
+/**
+ * Cor pela SEMÂNTICA/outOfBand, não pela direção crua — up≠sempre-bom aqui
+ * (mesma disciplina do Delta): fora-da-faixa = âmbar; dentro + melhorando = verde;
+ * o resto (neutro/piorando-mas-em-faixa) = text-3.
+ */
+function TrendGlyph({ trend, outOfBand }: { trend: CloserRanking["trend"]; outOfBand: boolean }) {
+  const toneClass = outOfBand ? "text-rl-risk" : trend === "up" ? "text-rl-oxy" : "text-rl-text-3";
+
   if (trend === "up") {
     return (
-      <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden className="text-rl-oxy">
+      <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden className={toneClass}>
         <path d="M1 8.5L5 4.5L8 6.5L13 1.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
   if (trend === "down") {
     return (
-      <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden className="text-rl-danger">
+      <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden className={toneClass}>
         <path d="M1 1.5L5 5.5L8 3.5L13 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
   return (
-    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden className="text-rl-text-3">
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" aria-hidden className={toneClass}>
       <path d="M1 5h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
@@ -33,7 +40,7 @@ export function TeamRanking({ items }: TeamRankingProps) {
   const domain: [number, number] = [Math.min(...allTalk, 30), Math.max(...allTalk, 70)];
 
   return (
-    <div className="rl-raised rounded-rl-card bg-rl-surface-1">
+    <div className="rounded-rl-card border border-rl-border bg-rl-canvas">
       <div className="flex items-center justify-between border-b border-rl-border px-5 py-3.5">
         <span className="text-[10px] uppercase tracking-wider text-rl-text-3">
           Scorecard de coaching
@@ -82,8 +89,12 @@ export function TeamRanking({ items }: TeamRankingProps) {
                 {delta > 0 ? "+" : ""}
                 {delta}pp
               </span>
-              <span className="rl-readout text-right text-sm text-rl-oxy">{closer.buyingSignals}</span>
-              <TrendGlyph trend={closer.trend} />
+              {/* verde só quando há sinal presente — gateado, não cor-de-coluna fixa
+                  (mesma regra do VitalsReadout: buyingSignalsCount > 0 ? oxy : text-2) */}
+              <span className={`rl-readout text-right text-sm ${closer.buyingSignals > 0 ? "text-rl-oxy" : "text-rl-text-2"}`}>
+                {closer.buyingSignals}
+              </span>
+              <TrendGlyph trend={closer.trend} outOfBand={closer.outOfBand} />
             </li>
           );
         })}
