@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import type { Call } from "@/lib/mock/calls";
-import { Sparkline } from "@/components/Sparkline";
+import { PulseWave } from "@/components/PulseWave";
 import { SignalChip } from "@/components/SignalChip";
 import { OutcomeControl } from "@/components/OutcomeControl";
+import { useViewTransitionNav } from "@/lib/useViewTransitionNav";
 
 const OUTCOME_LABEL: Record<Call["outcome"], string> = {
   ganho: "ganho",
@@ -15,25 +18,34 @@ type CallLogRowProps = {
   index?: number;
 };
 
-// domínio fixo compartilhado por todas as linhas — a anomalia salta pela silhueta
-const TALK_DOMAIN: [number, number] = [0, 100];
-
 export function CallLogRow({ call, index = 0 }: CallLogRowProps) {
   const isProcessing = call.status === "processando";
   const isRisk = call.signal === "risco";
+  const href = `/calls/${call.id}`;
+  const navigate = useViewTransitionNav();
+
+  // clique simples de botão esquerdo sem modificadores → morph via View Transitions;
+  // cmd/ctrl/shift/middle-click seguem o comportamento nativo do <Link> (abrir aba, etc.)
+  function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    navigate(href);
+  }
 
   return (
     <Link
-      href={`/calls/${call.id}`}
+      href={href}
+      onClick={handleClick}
       data-callrow=""
       data-idx={index}
-      className="group relative grid grid-cols-[1fr_auto_auto_96px_auto_auto] items-center gap-4 border-b border-rl-border px-4 py-3.5 outline-none transition-colors hover:bg-rl-surface-1 focus-visible:bg-rl-surface-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_96px_auto_auto]"
+      className="group relative grid grid-cols-[1fr_auto_auto_96px_auto_auto] items-center gap-4 border-b border-rl-border px-4 py-3.5 outline-none rl-t-hover transition-colors hover:bg-rl-surface-1 focus-visible:bg-rl-surface-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_96px_auto_auto]"
     >
-      {/* rail: severidade sempre visível (risco); foco/hover acende oxy */}
+      {/* rail: severidade (risco) sempre visível. Foco de teclado tem presença PRÓPRIA —
+          rail oxy sólido — distinta do hover (que só clareia o fundo, sem rail). */}
       <span
         className={`absolute inset-y-0 left-0 w-[2px] origin-center ${
           isRisk ? "scale-y-100 bg-rl-risk" : "scale-y-0 bg-rl-oxy"
-        } transition-transform duration-150 group-hover:scale-y-100 group-focus-visible:scale-y-100 group-focus-visible:bg-rl-oxy`}
+        } rl-t-hover transition-transform group-focus-visible:scale-y-100 group-focus-visible:bg-rl-oxy`}
         aria-hidden
       />
 
@@ -61,23 +73,19 @@ export function CallLogRow({ call, index = 0 }: CallLogRowProps) {
         ) : null}
       </div>
 
-      {/* mini-pulse de escala FIXA (talk-ratio por minuto) — comparável entre linhas */}
+      {/* mini-pulse oxímetro de DUAS VOZES (rep verde / prospect teal) — assinatura nº1,
+          reconhecível como "pulso", não como line-chart genérico */}
       <div
-        className="hidden h-6 opacity-85 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 sm:block"
+        className="hidden h-6 opacity-85 rl-t-hover transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 sm:block"
         style={{ viewTransitionName: `pulse-${call.id}` }}
       >
-        {isProcessing || !call.talkRatioByMinute ? (
+        {isProcessing || call.pulse.length === 0 ? (
           <div className="relative h-full w-full">
             <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-rl-text-muted/40" />
-            <div className="rl-blip absolute top-1/2 h-1 w-1 -translate-y-1/2 rounded-full bg-rl-oxy" style={{ left: "40%" }} />
+            <div className="rl-blip-sweep absolute top-1/2 h-1 w-1 -translate-y-1/2 rounded-full bg-rl-oxy" style={{ left: "0%" }} />
           </div>
         ) : (
-          <Sparkline
-            data={call.talkRatioByMinute}
-            domain={TALK_DOMAIN}
-            tone={call.talkRatioRep >= 60 ? "risk" : "oxy"}
-            height={24}
-          />
+          <PulseWave segments={call.pulse} variant="sparkline" seed={call.id} />
         )}
       </div>
 
@@ -109,7 +117,7 @@ export function CallLogRow({ call, index = 0 }: CallLogRowProps) {
       {/* ações reveladas em hover/foco + atribuição rápida de resultado + chevron */}
       <div className="flex items-center gap-3">
         {!isProcessing ? (
-          <div className="hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 sm:block">
+          <div className="hidden opacity-0 rl-t-hover transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 sm:block">
             <OutcomeControl
               account={call.account}
               initialOutcome={call.outcome}
@@ -118,10 +126,10 @@ export function CallLogRow({ call, index = 0 }: CallLogRowProps) {
             />
           </div>
         ) : null}
-        <span className="rl-readout hidden text-[11px] text-rl-oxy opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 sm:inline">
+        <span className="rl-readout hidden text-[11px] text-rl-oxy opacity-0 rl-t-hover transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 sm:inline">
           Abrir
         </span>
-        <span className="text-rl-text-muted transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-rl-text-2 group-focus-visible:translate-x-0.5 group-focus-visible:text-rl-oxy">
+        <span className="text-rl-text-muted rl-t-hover transition-transform group-hover:translate-x-0.5 group-hover:text-rl-text-2 group-focus-visible:translate-x-0.5 group-focus-visible:text-rl-oxy">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
