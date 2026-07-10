@@ -6,7 +6,7 @@ No fim, você vai ter preenchido o arquivo `.env.local` (copiado de `.env.exampl
 > **Como usar:** para cada valor gerado, cole no `.env.local`. Nunca commite o `.env.local`
 > (o `.gitignore` já protege). Guarde os segredos num gerenciador de senhas.
 
-Ordem sugerida: **1) Supabase → 2) OpenAI → 3) Segredos locais → 4) Google** (o Google é o
+Ordem sugerida: **1) Supabase → 2) Gemini → 3) Segredos locais → 4) Google** (o Google é o
 mais longo e é o que destrava a captura das calls).
 
 ---
@@ -29,14 +29,19 @@ Gera: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SER
 
 ---
 
-## 2. OpenAI (IA dos resumos) — ~2 min
+## 2. Google Gemini (IA dos resumos) — ~2 min
 
-Gera: `OPENAI_API_KEY`
+Gera: `GEMINI_API_KEY`
 
-1. Acesse https://platform.openai.com/api-keys (login com a conta que tem billing).
-2. **Create new secret key** → nome `revlens` → copie a chave (`sk-...`).
-   Ela só aparece uma vez; cole já em `OPENAI_API_KEY`.
-3. Confirme que a conta tem crédito/billing ativo (Settings → Billing). O uso do MVP é baixo (~US$ 10–30/mês).
+1. Acesse https://aistudio.google.com/apikey (login com a conta Google da empresa).
+2. **Create API key** → escolha o projeto Google Cloud `revlens` (o mesmo do passo 4) ou crie um.
+3. Copie a chave e cole em `GEMINI_API_KEY`.
+4. O uso do MVP é baixo. O modelo padrão será **Gemini 2.5 Flash** (rápido e barato) para as
+   análises e **gemini-embedding-001** para a busca semântica. Confirme se há billing/limite
+   adequado no projeto (o free tier do AI Studio já cobre testes).
+
+> Dica: usar o **mesmo projeto Google Cloud** (`revlens`) para o Gemini e para as APIs do Meet
+> deixa tudo (billing, permissões, logs) num lugar só.
 
 ---
 
@@ -142,7 +147,7 @@ implementação da ingestão. Se não aparecer, a gente ajusta o plano (plano B:
 - [ ] `NEXT_PUBLIC_SUPABASE_URL`
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] `OPENAI_API_KEY`
+- [ ] `GEMINI_API_KEY`
 - [ ] `ALLOWED_EMAIL_DOMAIN` = `o2inc.com.br`
 - [ ] `GOOGLE_CLIENT_ID`
 - [ ] `GOOGLE_CLIENT_SECRET`
