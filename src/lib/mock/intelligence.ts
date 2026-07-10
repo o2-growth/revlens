@@ -120,8 +120,9 @@ export const operationMetrics: OperationMetric[] = [
     deltaLabel: `${pct(totalCallsThisWeek, prevWeek.calls) >= 0 ? "+" : ""}${pct(totalCallsThisWeek, prevWeek.calls)}%`,
     prevValueLabel: `era ${prevWeek.calls}`,
     direction: totalCallsThisWeek >= prevWeek.calls ? "up" : "down",
-    tone: "good",
-    toneColor: "oxy",
+    // volume de calls é atividade, não sinal de saúde — mantém neutro (verde só é sinal)
+    tone: "neutral",
+    toneColor: "muted",
     history: [5, 6, 7, 6, 9, 7, 6, 8],
   },
   {

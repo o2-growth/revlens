@@ -104,22 +104,20 @@ export function TrendChart({ data }: TrendChartProps) {
           <line key={f} x1={0} x2={WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke="var(--color-rl-border-soft)" strokeWidth={1} />
         ))}
 
-        {/* barras de volume (subtis, fundo) */}
+        {/* barras de volume (subtis, fundo — não competem com a linha) */}
         {data.map((d, i) => {
-          const x = xOf(i) - slot * 0.2;
-          const h = maxCalls > 0 ? (d.calls / maxCalls) * (CHART_HEIGHT - 20) : 0;
+          const x = xOf(i) - slot * 0.16;
+          const h = maxCalls > 0 ? (d.calls / maxCalls) * (CHART_HEIGHT * 0.4) : 0;
           return (
             <rect
               key={`bar-${i}`}
               x={x}
               y={CHART_HEIGHT - h}
-              width={slot * 0.4}
+              width={slot * 0.32}
               height={h}
               rx={2}
               fill="var(--color-rl-surface-3)"
-              stroke="var(--color-rl-border-strong)"
-              strokeWidth={1}
-              opacity={d.future ? 0.4 : 0.7}
+              opacity={d.future ? 0.3 : 0.55}
             />
           );
         })}
