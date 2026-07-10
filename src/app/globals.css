@@ -1,28 +1,94 @@
 @import "tailwindcss";
 
+/*
+  revlens — Design System "Monitor de Sinais Vitais da Receita"
+  Marca O2 Inc: fundo quase-preto com tint verde, verde-oxigênio como SINAL.
+  Verde = sinal (fala do rep, positivo, ativo). Âmbar = risco. Nunca decorativo.
+*/
+
 @theme {
-  --color-rl-deep: #0a0a0f;
-  --color-rl-surface: #12121a;
-  --color-rl-elevated: #1a1a26;
-  --color-rl-border-subtle: #23232f;
-  --color-rl-border-hover: #33334a;
-  --color-rl-text-primary: #ffffff;
-  --color-rl-text-secondary: #9a9aa5;
-  --color-rl-text-muted: #5a5a68;
+  /* ── Superfícies (elevação: near-black com leve tint verde; sobe = clareia pouco) ── */
+  --color-rl-canvas: #0b0e0d;   /* base / página / sidebar (mesma cor, separação por borda) */
+  --color-rl-surface-1: #101413;
+  --color-rl-surface-2: #151a19;
+  --color-rl-surface-3: #1b2120; /* dropdowns, popovers — 1 nível acima do card */
+  --color-rl-inset: #080b0a;     /* inputs — mais ESCURO que o entorno (recebe conteúdo) */
+
+  /* ── Bordas (baixa opacidade — some quando não se procura, achável quando precisa) ── */
+  --color-rl-border: rgba(230, 255, 240, 0.08);
+  --color-rl-border-soft: rgba(230, 255, 240, 0.05);
+  --color-rl-border-strong: rgba(230, 255, 240, 0.14);
+
+  /* ── Texto (4 níveis reais de hierarquia) ── */
+  --color-rl-text: #f2f6f3;        /* primário */
+  --color-rl-text-2: #a6afaa;      /* secundário / apoio */
+  --color-rl-text-3: #6d766f;      /* terciário / metadados */
+  --color-rl-text-muted: #474e49;  /* muted / placeholder / disabled */
+
+  /* ── Oxigênio (SINAL) ── */
+  --color-rl-oxy: #6cf269;         /* verde-oxigênio principal (marca O2) */
+  --color-rl-oxy-bright: #01f451;  /* picos de pulso / estado ativo */
+  --color-rl-oxy-dim: rgba(108, 242, 105, 0.14); /* fundo/glow do sinal */
+  --color-rl-oxy-ink: #06210f;     /* texto sobre botão verde (preto-esverdeado) */
+
+  /* ── Semânticas (dessaturadas pro dark) ── */
+  --color-rl-risk: #f5b851;        /* âmbar — risco / atenção */
+  --color-rl-risk-dim: rgba(245, 184, 81, 0.13);
+  --color-rl-danger: #ff6b6b;      /* vermelho — objeção crítica / perdido */
+  --color-rl-prospect: #6ba8a0;    /* fala do prospect (teal frio, contrasta c/ o verde do rep) */
+
+  /* ── Tipografia (variáveis vindas do next/font em layout.tsx) ── */
+  --font-display: var(--font-anton), "Arial Narrow", sans-serif; /* momentos display */
+  --font-ui: var(--font-host), Montserrat, system-ui, sans-serif; /* UI / corpo */
+  --font-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace; /* readouts */
+
+  /* ── Espaçamento base 4px (multiplicadores no scale do Tailwind) ── */
+  --spacing: 4px;
+
+  /* ── Radius (técnico, alinhado aos 8px dos botões da O2) ── */
+  --radius-rl-control: 8px;  /* botões, inputs */
+  --radius-rl-card: 12px;    /* cards */
+  --radius-rl-modal: 16px;   /* modais */
 }
 
 :root {
-  --bg-deep: #0a0a0f;
-  --bg-surface: #12121a;
-  --bg-elevated: #1a1a26;
-  --border-subtle: #23232f;
-  --border-hover: #33334a;
-  --text-primary: #ffffff;
-  --text-secondary: #9a9aa5;
-  --text-muted: #5a5a68;
+  color-scheme: dark;
+}
+
+* {
+  border-color: var(--color-rl-border);
 }
 
 body {
-  background: #0a0a0f;
-  color: #ffffff;
+  background: var(--color-rl-canvas);
+  color: var(--color-rl-text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Números tabulares nos readouts (tempo de fala, scores, timestamps alinham) */
+.rl-readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Título display estilo O2 (Anton, caixa alta, condensado) */
+.rl-display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
+  line-height: 0.95;
+}
+
+/* Glow sutil de sinal — só em elementos "vivos" (pulso ativo, botão primário hover) */
+.rl-glow {
+  box-shadow: 0 0 0 1px var(--color-rl-oxy-dim), 0 0 24px -8px rgba(108, 242, 105, 0.4);
+}
+
+/* Foco: anel verde-oxigênio (acessibilidade + coerência de marca) */
+:focus-visible {
+  outline: 2px solid var(--color-rl-oxy);
+  outline-offset: 2px;
 }
