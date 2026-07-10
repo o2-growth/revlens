@@ -115,6 +115,7 @@ export function PulseWave({ segments, variant = "large", seed = "", draw = false
         <polyline
           key={i}
           className={draw ? "rl-trace" : undefined}
+          pathLength={draw ? 1 : undefined}
           style={draw ? { animationDelay: run.speaker === "rep" ? "0ms" : "120ms" } : undefined}
           points={run.points}
           fill="none"
