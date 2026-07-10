@@ -8,7 +8,7 @@ export function ObjectionRanking({ items }: ObjectionRankingProps) {
   const maxPct = Math.max(...items.map((i) => i.pctOfCalls));
 
   return (
-    <div className="rl-raised rounded-rl-card bg-rl-surface-1">
+    <div className="rounded-rl-card border border-rl-border bg-rl-canvas">
       <div className="flex items-center justify-between border-b border-rl-border px-5 py-3.5">
         <span className="text-[10px] uppercase tracking-wider text-rl-text-3">Objeções da semana</span>
         <span className="rl-readout text-[11px] text-rl-text-3">{items.length} temas</span>

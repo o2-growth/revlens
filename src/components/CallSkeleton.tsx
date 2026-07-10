@@ -1,25 +1,32 @@
 /** Estado "processando" = skeleton que espelha o layout final. Zero spinner. */
 
-const CELLS = [
-  "Talk ratio",
-  "Sentimento",
-  "Objeções",
-  "Sinais de compra",
-  "Duração",
-  "Maior monólogo",
-  "Perguntas/hora",
-];
+const PRIMARY_CELLS = ["Sentimento", "Objeções", "Sinais de compra", "Duração"];
+const COACHING_CELLS = ["Talk ratio", "Maior monólogo", "Perguntas/hora"];
+
+function SkeletonCell({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col px-4 py-3.5">
+      <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{label}</div>
+      <div className="rl-shimmer mt-2 h-6 w-2/3 rounded bg-rl-inset" />
+      <div className="mt-3 h-[3px] w-full rounded-full bg-rl-inset" />
+    </div>
+  );
+}
 
 export function VitalsSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-      {CELLS.map((label) => (
-        <div key={label} className="rl-raised flex flex-col rounded-rl-card bg-rl-surface-1 px-4 py-3.5">
-          <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{label}</div>
-          <div className="rl-shimmer mt-2 h-6 w-2/3 rounded bg-rl-inset" />
-          <div className="mt-3 h-[3px] w-full rounded-full bg-rl-inset" />
-        </div>
-      ))}
+    <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-2">
+      <div className="grid grid-cols-2 divide-x divide-y divide-rl-border-soft sm:grid-cols-4 sm:divide-y-0">
+        {PRIMARY_CELLS.map((label) => (
+          <SkeletonCell key={label} label={label} />
+        ))}
+      </div>
+      <div className="my-1 border-t border-rl-border-soft" />
+      <div className="grid grid-cols-1 divide-y divide-rl-border-soft sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {COACHING_CELLS.map((label) => (
+          <SkeletonCell key={label} label={label} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -35,10 +42,10 @@ export function PulseSkeleton() {
         </span>
       </div>
 
-      {/* flatline pulsante com blip verde varrendo (oxímetro calibrando) */}
+      {/* flatline com blip verde VARRENDO (oxímetro calibrando) — monitor ligando, não spinner */}
       <div className="rl-shimmer relative h-20 w-full overflow-hidden rounded-rl-control bg-rl-inset/40">
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-rl-text-muted/40" />
-        <div className="rl-blip absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-rl-oxy" style={{ left: "18%" }} />
+        <div className="rl-blip-sweep absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-rl-oxy" style={{ left: "0%" }} />
       </div>
 
       <div className="mt-2 flex justify-between text-[10px] text-rl-text-muted">

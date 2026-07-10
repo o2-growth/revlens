@@ -49,7 +49,7 @@ export function CoachingClient() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.4fr]">
-        <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-5">
+        <div className="rounded-rl-card border border-rl-border bg-rl-canvas p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <span className="text-[10px] uppercase tracking-wider text-rl-text-3">
               Scorecard de coaching

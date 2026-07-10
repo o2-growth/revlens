@@ -59,7 +59,7 @@ function Cell({
   hint?: React.ReactNode;
 }) {
   return (
-    <div className="rl-raised flex flex-col rounded-rl-card bg-rl-surface-1 px-4 py-3.5">
+    <div className="flex flex-col px-4 py-3.5">
       <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{label}</div>
       <div className="mt-1 flex items-baseline gap-2 text-xl font-medium">{children}</div>
       {band ? <div className="mt-2.5">{band}</div> : null}
@@ -76,54 +76,62 @@ export function VitalsReadout({ call }: VitalsReadoutProps) {
       : call.objections?.[0]?.atTimestamp ?? call.buyingSignalDetails?.[0]?.atTimestamp;
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-      <Cell
-        label="Talk ratio"
-        band={<TargetBand value={call.talkRatioRep} band={[40, 55]} scale={[0, 100]} />}
-      >
-        <Readout value={call.talkRatioRep} unit="%" tone={talkRatioTone(call.talkRatioRep)} hero />
-      </Cell>
+    <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-2">
+      {/* Bloco 1 — medições da call (o que aconteceu) */}
+      <div className="grid grid-cols-2 divide-x divide-y divide-rl-border-soft sm:grid-cols-4 sm:divide-y-0">
+        <Cell
+          label="Sentimento"
+          hint={
+            sentimentTs ? (
+              <EvidenceChip callId={call.id} timestamp={sentimentTs} tone={sentimentTone(call.sentiment) === "danger" ? "danger" : "oxy"} />
+            ) : null
+          }
+        >
+          <span className={`rl-readout-hero ${toneText[sentimentTone(call.sentiment)]}`}>
+            {call.sentiment}
+          </span>
+        </Cell>
 
-      <Cell
-        label="Sentimento"
-        hint={
-          sentimentTs ? (
-            <EvidenceChip callId={call.id} timestamp={sentimentTs} tone={sentimentTone(call.sentiment) === "danger" ? "danger" : "oxy"} />
-          ) : null
-        }
-      >
-        <span className={`rl-readout-hero ${toneText[sentimentTone(call.sentiment)]}`}>
-          {call.sentiment}
-        </span>
-      </Cell>
+        <Cell label="Objeções">
+          <Readout value={call.objectionsCount} tone={objectionsTone(call.objectionsCount)} delayMs={0} hero />
+        </Cell>
 
-      <Cell label="Objeções">
-        <Readout value={call.objectionsCount} tone={objectionsTone(call.objectionsCount)} hero />
-      </Cell>
+        <Cell label="Sinais de compra">
+          <Readout value={call.buyingSignalsCount} tone={call.buyingSignalsCount > 0 ? "oxy" : "text-2"} delayMs={70} hero />
+        </Cell>
 
-      <Cell label="Sinais de compra">
-        <Readout value={call.buyingSignalsCount} tone={call.buyingSignalsCount > 0 ? "oxy" : "text-2"} hero />
-      </Cell>
+        <Cell label="Duração">
+          <span className="rl-readout-hero text-rl-text">{call.durationLabel}</span>
+        </Cell>
+      </div>
 
-      <Cell label="Duração">
-        <span className="rl-readout-hero text-rl-text">{call.durationLabel}</span>
-      </Cell>
+      {/* divisor semântico — coaching (como foi conduzida) */}
+      <div className="my-1 border-t border-rl-border-soft" />
 
-      <Cell
-        label="Maior monólogo"
-        band={<TargetBand value={call.longestMonologueSec} band={[0, 150]} scale={[0, 300]} />}
-      >
-        <span className={`rl-readout-hero ${toneText[monologueTone(call.longestMonologueSec)]}`}>
-          {fmtMonologue(call.longestMonologueSec)}
-        </span>
-      </Cell>
+      <div className="grid grid-cols-1 divide-y divide-rl-border-soft sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <Cell
+          label="Talk ratio"
+          band={<TargetBand value={call.talkRatioRep} band={[40, 55]} scale={[0, 100]} />}
+        >
+          <Readout value={call.talkRatioRep} unit="%" tone={talkRatioTone(call.talkRatioRep)} delayMs={140} hero />
+        </Cell>
 
-      <Cell
-        label="Perguntas/hora"
-        band={<TargetBand value={call.questionsPerHour} band={[8, 30]} scale={[0, 30]} />}
-      >
-        <Readout value={call.questionsPerHour} tone={questionsTone(call.questionsPerHour)} hero />
-      </Cell>
+        <Cell
+          label="Maior monólogo"
+          band={<TargetBand value={call.longestMonologueSec} band={[0, 150]} scale={[0, 300]} />}
+        >
+          <span className={`rl-readout-hero ${toneText[monologueTone(call.longestMonologueSec)]}`}>
+            {fmtMonologue(call.longestMonologueSec)}
+          </span>
+        </Cell>
+
+        <Cell
+          label="Perguntas/hora"
+          band={<TargetBand value={call.questionsPerHour} band={[8, 30]} scale={[0, 30]} />}
+        >
+          <Readout value={call.questionsPerHour} tone={questionsTone(call.questionsPerHour)} delayMs={210} hero />
+        </Cell>
+      </div>
     </div>
   );
 }

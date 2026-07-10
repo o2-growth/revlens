@@ -8,7 +8,7 @@ type BuyingSignalsProps = {
 
 export function BuyingSignals({ items }: BuyingSignalsProps) {
   return (
-    <div className="rl-raised rounded-rl-card bg-rl-surface-1">
+    <div className="rounded-rl-card border border-rl-border bg-rl-canvas">
       <div className="flex items-center justify-between border-b border-rl-border px-5 py-3.5">
         <span className="text-[10px] uppercase tracking-wider text-rl-text-3">Sinais de compra recentes</span>
         <span className="rl-readout text-[11px] text-rl-text-3">{items.length} destaques</span>

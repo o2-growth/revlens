@@ -22,7 +22,7 @@ function AutocoachIcon() {
 /** Nota de autocoach (IA) + os dois momentos com maior peso: melhor e a maior falha. */
 export function AutocoachNote({ closer }: AutocoachNoteProps) {
   return (
-    <div className="rl-raised rounded-rl-card bg-rl-surface-1">
+    <div className="rounded-rl-card border border-rl-border bg-rl-canvas">
       <div className="flex items-center gap-2 border-b border-rl-border px-5 py-3.5">
         <span className="text-rl-oxy">
           <AutocoachIcon />

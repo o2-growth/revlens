@@ -184,7 +184,7 @@ export default async function CallPage({
           </>
         )}
 
-        <div className="mt-6 rounded-rl-card border border-rl-border bg-rl-surface-1 p-5">
+        <div className="mt-6 rounded-rl-card border border-rl-border bg-rl-canvas p-5">
           <div className="mb-1 text-[10px] uppercase tracking-wider text-rl-text-3">Transcrição</div>
           <div className="divide-y divide-rl-border-soft">
             {call.transcript.map((turn, i) => (
@@ -222,9 +222,11 @@ function NextSteps({ call }: { call: ReturnType<typeof getCallById> }) {
   );
 }
 
+// Agrupador secundário (ao lado do CallStage/VitalsReadout, que são herói) — canvas +
+// borda só, sem quina de luz nem surface-1 (reserva profundidade pro que importa mais).
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-5">
+    <div className="rounded-rl-card border border-rl-border bg-rl-canvas p-5">
       <div className="mb-3 text-[10px] uppercase tracking-wider text-rl-text-3">{title}</div>
       {children}
     </div>

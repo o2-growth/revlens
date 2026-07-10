@@ -23,44 +23,47 @@ const sparkTone = {
 
 export function OperationVitals({ metrics }: OperationVitalsProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-      {metrics.map((m, i) => {
-        const dMin = Math.min(...m.history);
-        const dMax = Math.max(...m.history);
-        return (
-          <div
-            key={m.key}
-            className="rl-raised rl-enter flex flex-col rounded-rl-card bg-rl-surface-1 px-4 pt-4 pb-3"
-            style={{ ["--i" as string]: i }}
-          >
-            <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{m.label}</div>
-            <div className="mt-1.5 text-2xl">
-              <Readout
-                value={m.numericValue}
-                unit={m.unit}
-                tone={toneMap[m.toneColor]}
-                hero
+    <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-2">
+      <div className="grid grid-cols-2 divide-x divide-y divide-rl-border-soft sm:grid-cols-5 sm:divide-y-0">
+        {metrics.map((m, i) => {
+          const dMin = Math.min(...m.history);
+          const dMax = Math.max(...m.history);
+          return (
+            <div
+              key={m.key}
+              className="rl-enter flex flex-col px-4 pt-3 pb-3"
+              style={{ ["--i" as string]: i }}
+            >
+              <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{m.label}</div>
+              <div className="mt-1.5 text-2xl">
+                <Readout
+                  value={m.numericValue}
+                  unit={m.unit}
+                  tone={toneMap[m.toneColor]}
+                  delayMs={i * 70}
+                  hero
+                />
+              </div>
+              <Delta
+                className="mt-1.5"
+                label={m.deltaLabel}
+                direction={m.direction}
+                tone={m.tone}
+                was={m.prevValueLabel}
               />
+              <div className="mt-2.5 h-5">
+                <Sparkline
+                  data={m.history}
+                  domain={[dMin, dMax]}
+                  tone={sparkTone[m.toneColor]}
+                  tail
+                  height={20}
+                />
+              </div>
             </div>
-            <Delta
-              className="mt-1.5"
-              label={m.deltaLabel}
-              direction={m.direction}
-              tone={m.tone}
-              was={m.prevValueLabel}
-            />
-            <div className="mt-2.5 h-5">
-              <Sparkline
-                data={m.history}
-                domain={[dMin, dMax]}
-                tone={sparkTone[m.toneColor]}
-                tail
-                height={20}
-              />
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
