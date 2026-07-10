@@ -94,9 +94,24 @@ function PlaybookIcon() {
   );
 }
 
+function ImportIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden>
+      <path
+        d="M8.5 2.5v8.5m0 0l-3-3m3 3l3-3M3 12.5v1a1.5 1.5 0 001.5 1.5h8a1.5 1.5 0 001.5-1.5v-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/", label: "Painel", icon: PainelIcon, disabled: false },
   { href: "/calls", label: "Calls", icon: CallsIcon, disabled: false },
+  { href: "/import", label: "Importar", icon: ImportIcon, disabled: false },
   { href: "/search", label: "Busca", icon: SearchIcon, disabled: false },
   { href: "/coaching", label: "Coaching", icon: CoachingIcon, disabled: false },
   { href: "/playbook", label: "Playbook", icon: PlaybookIcon, disabled: false },
