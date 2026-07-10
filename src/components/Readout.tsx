@@ -24,6 +24,8 @@ type ReadoutProps = {
   /** valor estático quando animate=false ou pra strings não-numéricas */
   className?: string;
   hero?: boolean;
+  /** stagger de orquestração — cascateia o início do count-up (herói primeiro, ~60-80ms/item) */
+  delayMs?: number;
 };
 
 /** Valor de medição em mono + unidade rebaixada (0.62em, text-3). */
@@ -35,8 +37,9 @@ export function Readout({
   decimals = 0,
   className = "",
   hero = false,
+  delayMs = 0,
 }: ReadoutProps) {
-  const { value: counted, ref } = useCountUp(value, { decimals });
+  const { value: counted, ref } = useCountUp(value, { decimals, delayMs });
   const shown = animate ? counted : value;
   const base = hero ? "rl-readout-hero" : "rl-readout";
 

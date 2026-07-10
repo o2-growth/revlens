@@ -44,7 +44,7 @@ export function InterventionQueue({ items }: InterventionQueueProps) {
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                     <Link
                       href={`/calls/${item.callId}`}
-                      className="truncate text-sm font-medium text-rl-text transition-colors hover:text-rl-oxy"
+                      className="truncate text-sm font-medium text-rl-text rl-t-hover transition-colors hover:text-rl-oxy"
                     >
                       {item.account}
                     </Link>
@@ -83,7 +83,7 @@ export function InterventionQueue({ items }: InterventionQueueProps) {
                 {/* ação recomendada de um clique */}
                 <Link
                   href={`/calls/${item.callId}`}
-                  className="rl-press mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-rl-control border border-rl-oxy/30 bg-rl-oxy-dim px-2.5 py-1.5 text-[11px] font-medium text-rl-oxy transition-colors hover:border-rl-oxy/60 hover:bg-rl-oxy/15"
+                  className="rl-press rl-cta-glow mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-rl-control border border-rl-oxy/30 bg-rl-oxy-dim px-2.5 py-1.5 text-[11px] font-medium text-rl-oxy rl-t-hover transition-colors hover:border-rl-oxy/60 hover:bg-rl-oxy/15"
                 >
                   {item.recommendedAction}
                   <svg width="10" height="10" viewBox="0 0 11 11" fill="none" aria-hidden>
