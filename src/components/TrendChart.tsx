@@ -1,4 +1,5 @@
 import type { WeeklyPoint } from "@/lib/mock/intelligence";
+import { forecastBand, forecast } from "@/lib/mock/intelligence";
 
 type TrendChartProps = {
   data: WeeklyPoint[];
@@ -9,33 +10,65 @@ const CHART_HEIGHT = 168;
 const LABEL_HEIGHT = 26;
 const HEIGHT = CHART_HEIGHT + LABEL_HEIGHT;
 
+function formatMi(v: number) {
+  return `${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Mi`;
+}
+
 export function TrendChart({ data }: TrendChartProps) {
   const maxCalls = Math.max(...data.map((d) => d.calls));
   const slot = WIDTH / data.length;
-  const barWidth = slot * 0.4;
+  const yOf = (sentiment: number) => CHART_HEIGHT - (sentiment / 100) * (CHART_HEIGHT - 12) - 6;
+  const xOf = (i: number) => slot * i + slot / 2;
 
-  const linePoints = data.map((d, i) => {
-    const x = slot * i + slot / 2;
-    const y = CHART_HEIGHT - (d.sentiment / 100) * (CHART_HEIGHT - 12) - 6;
-    return { x, y, ...d };
-  });
+  const historical = data.filter((d) => !d.future);
+  const lastHistIdx = historical.length - 1; // índice do "Atual"
+  const floor = forecastBand.healthyFloor;
 
-  const linePath = linePoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const histPoints = historical.map((d, i) => ({ x: xOf(i), y: yOf(d.sentiment), ...d }));
+  const histPath = histPoints.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+
+  // Cone do forecast (Atual → S+2): índices lastHistIdx, +1, +2
+  const coneIdx = [lastHistIdx, lastHistIdx + 1, lastHistIdx + 2];
+  const bestPts = forecastBand.best.map((v, k) => ({ x: xOf(coneIdx[k]), y: yOf(v) }));
+  const worstPts = forecastBand.worst.map((v, k) => ({ x: xOf(coneIdx[k]), y: yOf(v) }));
+  const commitPts = forecastBand.commit.map((v, k) => ({ x: xOf(coneIdx[k]), y: yOf(v), v }));
+  const conePath =
+    "M " +
+    bestPts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ") +
+    " L " +
+    [...worstPts].reverse().map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ") +
+    " Z";
+
+  const redlineX = xOf(lastHistIdx);
+  const bandTopY = yOf(100);
+  const bandBottomY = yOf(floor);
+
+  const confPct = forecast.confidence;
 
   return (
-    <div className="rounded-rl-card border border-rl-border bg-rl-surface-1 p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-rl-text-3">
-          Pulso do comercial · 8 semanas
-        </span>
-        <span className="flex items-center gap-4 text-[11px] text-rl-text-3">
+    <div className="rl-raised rounded-rl-card bg-rl-surface-1 p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] uppercase tracking-wider text-rl-text-3">
+            Linha do horizonte · sentimento + forecast
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="rl-readout-hero text-lg text-rl-oxy">R$ {formatMi(forecast.commit)}</span>
+            <span className="rl-readout text-[11px] text-rl-text-3">commit do trimestre</span>
+            <span className="rl-readout text-[11px] text-rl-text-2">
+              · confiança <span className="text-rl-oxy">{confPct}%</span>
+            </span>
+          </div>
+        </div>
+        <span className="flex flex-wrap items-center gap-4 text-[11px] text-rl-text-3">
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-rl-surface-3 border border-rl-border-strong" />
-            volume de calls
+            <span className="h-1.5 w-1.5 rounded-full bg-rl-oxy" /> sentimento
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-rl-oxy" />
-            sentimento
+            <span className="inline-block h-[7px] w-3.5 rounded-sm" style={{ background: "var(--color-rl-oxy-band)", boxShadow: "inset 0 0 0 1px rgba(108,242,105,0.22)" }} /> faixa saudável
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-0 w-3.5 border-t border-dashed border-rl-text-3" /> projeção
           </span>
         </span>
       </div>
@@ -46,82 +79,117 @@ export function TrendChart({ data }: TrendChartProps) {
         preserveAspectRatio="none"
         className="h-56 w-full"
         role="img"
-        aria-label="Tendência de 8 semanas: volume de calls em barras e sentimento médio em linha"
+        aria-label="Sentimento das últimas 8 semanas continuado por um cone de forecast; faixa saudável marcada e linha 'agora' destacada"
       >
+        <defs>
+          <linearGradient id="rl-redline" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-rl-oxy)" stopOpacity="0" />
+            <stop offset="50%" stopColor="var(--color-rl-oxy)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--color-rl-oxy)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* faixa saudável (zona-alvo) */}
+        <rect
+          x={0}
+          y={bandTopY}
+          width={WIDTH}
+          height={bandBottomY - bandTopY}
+          fill="var(--color-rl-oxy-band)"
+        />
+        <line x1={0} x2={WIDTH} y1={bandBottomY} y2={bandBottomY} stroke="var(--color-rl-oxy)" strokeOpacity={0.2} strokeWidth={1} strokeDasharray="3 5" />
+
         {/* linhas de referência sutis */}
-        {[0.25, 0.5, 0.75].map((f) => (
-          <line
-            key={f}
-            x1={0}
-            x2={WIDTH}
-            y1={CHART_HEIGHT * f}
-            y2={CHART_HEIGHT * f}
-            stroke="var(--color-rl-border-soft)"
-            strokeWidth={1}
-          />
+        {[0.25, 0.75].map((f) => (
+          <line key={f} x1={0} x2={WIDTH} y1={CHART_HEIGHT * f} y2={CHART_HEIGHT * f} stroke="var(--color-rl-border-soft)" strokeWidth={1} />
         ))}
 
-        {/* barras de volume */}
+        {/* barras de volume (subtis, fundo) */}
         {data.map((d, i) => {
-          const x = slot * i + slot / 2 - barWidth / 2;
+          const x = xOf(i) - slot * 0.2;
           const h = maxCalls > 0 ? (d.calls / maxCalls) * (CHART_HEIGHT - 20) : 0;
-          const isCurrent = i === data.length - 1;
           return (
             <rect
-              key={`bar-${d.weekLabel}-${i}`}
+              key={`bar-${i}`}
               x={x}
               y={CHART_HEIGHT - h}
-              width={barWidth}
+              width={slot * 0.4}
               height={h}
               rx={2}
-              fill={isCurrent ? "var(--color-rl-oxy-dim)" : "var(--color-rl-surface-3)"}
-              stroke={isCurrent ? "var(--color-rl-oxy)" : "var(--color-rl-border-strong)"}
-              strokeOpacity={isCurrent ? 0.4 : 1}
+              fill="var(--color-rl-surface-3)"
+              stroke="var(--color-rl-border-strong)"
               strokeWidth={1}
+              opacity={d.future ? 0.4 : 0.7}
             />
           );
         })}
 
-        {/* linha de sentimento — traço de oxímetro */}
+        {/* cone do forecast (banda best/worst) */}
+        <path d={conePath} fill="var(--color-rl-oxy-band)" stroke="none" />
+
+        {/* commit projetado — dotted, por-segmento (risk fora da faixa) */}
+        {commitPts.slice(1).map((p, k) => {
+          const prev = commitPts[k];
+          const belowFloor = p.v < floor || prev.v < floor;
+          return (
+            <line
+              key={`commit-${k}`}
+              x1={prev.x}
+              y1={prev.y}
+              x2={p.x}
+              y2={p.y}
+              stroke={belowFloor ? "var(--color-rl-risk)" : "var(--color-rl-oxy)"}
+              strokeWidth={1.75}
+              strokeDasharray="2 4"
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {commitPts.map((p, k) => (
+          <circle key={`cpt-${k}`} cx={p.x} cy={p.y} r={2} fill={p.v < floor ? "var(--color-rl-risk)" : "var(--color-rl-oxy)"} opacity={k === 0 ? 0 : 0.9} />
+        ))}
+
+        {/* linha histórica — traço único que se desenha */}
         <polyline
-          points={linePath}
+          className="rl-trace"
+          points={histPath}
           fill="none"
           stroke="var(--color-rl-oxy)"
           strokeWidth={1.75}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        {linePoints.map((p, i) => {
-          const isCurrent = i === linePoints.length - 1;
+
+        {/* segmentos abaixo da faixa acendem risco (sobreposto, sutil) */}
+        {histPoints.slice(1).map((p, k) => {
+          const prev = histPoints[k];
+          if (p.sentiment >= floor && prev.sentiment >= floor) return null;
           return (
-            <circle
-              key={`pt-${p.weekLabel}-${i}`}
-              cx={p.x}
-              cy={p.y}
-              r={isCurrent ? 3 : 2}
-              fill={isCurrent ? "var(--color-rl-oxy-bright)" : "var(--color-rl-oxy)"}
-            />
+            <line key={`risk-${k}`} x1={prev.x} y1={prev.y} x2={p.x} y2={p.y} stroke="var(--color-rl-risk)" strokeWidth={1.75} strokeLinecap="round" />
           );
         })}
 
-        {/* eixo: semanas + valores */}
-        {data.map((d, i) => {
-          const x = slot * i + slot / 2;
-          const isCurrent = i === data.length - 1;
-          return (
-            <text
-              key={`label-${d.weekLabel}-${i}`}
-              x={x}
-              y={CHART_HEIGHT + 17}
-              textAnchor="middle"
-              className="rl-readout"
-              fontSize={11}
-              fill={isCurrent ? "var(--color-rl-text-2)" : "var(--color-rl-text-3)"}
-            >
-              {d.weekLabel}
-            </text>
-          );
-        })}
+        {histPoints.map((p, i) => (
+          <circle key={`hpt-${i}`} cx={p.x} cy={p.y} r={i === lastHistIdx ? 3.2 : 2} fill={i === lastHistIdx ? "var(--color-rl-oxy-bright)" : "var(--color-rl-oxy)"} />
+        ))}
+
+        {/* redline "agora" com glow */}
+        <line x1={redlineX} x2={redlineX} y1={0} y2={CHART_HEIGHT} stroke="url(#rl-redline)" strokeWidth={2} />
+
+        {/* labels */}
+        {data.map((d, i) => (
+          <text
+            key={`label-${i}`}
+            x={xOf(i)}
+            y={CHART_HEIGHT + 17}
+            textAnchor="middle"
+            className="rl-readout"
+            fontSize={11}
+            fill={i === lastHistIdx ? "var(--color-rl-oxy)" : d.future ? "var(--color-rl-text-muted)" : "var(--color-rl-text-3)"}
+          >
+            {d.weekLabel}
+          </text>
+        ))}
       </svg>
     </div>
   );

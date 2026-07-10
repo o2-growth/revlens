@@ -1,17 +1,19 @@
 import { PeriodToggle } from "@/components/PeriodToggle";
+import { LeaderBriefing } from "@/components/LeaderBriefing";
 import { OperationVitals } from "@/components/OperationVitals";
 import { TrendChart } from "@/components/TrendChart";
-import { AttentionList } from "@/components/AttentionList";
+import { InterventionQueue } from "@/components/InterventionQueue";
 import { ObjectionRanking } from "@/components/ObjectionRanking";
 import { TeamRanking } from "@/components/TeamRanking";
 import { BuyingSignals } from "@/components/BuyingSignals";
 import {
   operationMetrics,
   weeklyTrend,
-  attentionList,
+  interventionQueue,
   objectionRanking,
   teamRanking,
   buyingSignals,
+  sinceYesterday,
 } from "@/lib/mock/intelligence";
 
 export default function PainelPage() {
@@ -26,12 +28,14 @@ export default function PainelPage() {
       </header>
 
       <div className="flex flex-col gap-6 px-8 py-6">
+        <LeaderBriefing headline={sinceYesterday.headline} items={sinceYesterday.items} />
+
         <OperationVitals metrics={operationMetrics} />
 
         <TrendChart data={weeklyTrend} />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_1fr]">
-          <AttentionList items={attentionList} />
+          <InterventionQueue items={interventionQueue} />
           <ObjectionRanking items={objectionRanking} />
         </div>
 

@@ -1,41 +1,66 @@
 import type { OperationMetric } from "@/lib/mock/intelligence";
+import { Readout } from "@/components/Readout";
+import { Sparkline } from "@/components/Sparkline";
+import { Delta } from "@/components/Delta";
 
 type OperationVitalsProps = {
   metrics: OperationMetric[];
 };
 
-function DeltaArrow({ direction }: { direction: "up" | "down" }) {
-  return direction === "up" ? (
-    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden>
-      <path d="M4.5 7.5V1.5M1.5 4.2L4.5 1.2l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ) : (
-    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden>
-      <path d="M4.5 1.5V7.5M1.5 4.8L4.5 7.8l3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const toneMap = {
+  oxy: "oxy",
+  risk: "risk",
+  danger: "danger",
+  muted: "text",
+} as const;
 
-function toneColor(tone: OperationMetric["tone"]) {
-  if (tone === "good") return "text-rl-oxy";
-  if (tone === "bad") return "text-rl-risk";
-  return "text-rl-text-3";
-}
+const sparkTone = {
+  oxy: "oxy",
+  risk: "risk",
+  danger: "danger",
+  muted: "text-3",
+} as const;
 
 export function OperationVitals({ metrics }: OperationVitalsProps) {
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-rl-card border border-rl-border bg-rl-border sm:grid-cols-5">
-      {metrics.map((m) => (
-        <div key={m.key} className="bg-rl-surface-1 px-4 py-4">
-          <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{m.label}</div>
-          <div className={`rl-readout mt-1.5 text-2xl font-medium ${m.colorClass}`}>{m.value}</div>
-          <div className={`rl-readout mt-1.5 flex items-center gap-1 text-[11px] ${toneColor(m.tone)}`}>
-            <DeltaArrow direction={m.direction} />
-            {m.deltaLabel}
-            <span className="text-rl-text-muted">vs. sem. passada</span>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+      {metrics.map((m, i) => {
+        const dMin = Math.min(...m.history);
+        const dMax = Math.max(...m.history);
+        return (
+          <div
+            key={m.key}
+            className="rl-raised rl-enter flex flex-col rounded-rl-card bg-rl-surface-1 px-4 pt-4 pb-3"
+            style={{ ["--i" as string]: i }}
+          >
+            <div className="text-[10px] uppercase tracking-wider text-rl-text-3">{m.label}</div>
+            <div className="mt-1.5 text-2xl">
+              <Readout
+                value={m.numericValue}
+                unit={m.unit}
+                tone={toneMap[m.toneColor]}
+                hero
+              />
+            </div>
+            <Delta
+              className="mt-1.5"
+              label={m.deltaLabel}
+              direction={m.direction}
+              tone={m.tone}
+              was={m.prevValueLabel}
+            />
+            <div className="mt-2.5 h-5">
+              <Sparkline
+                data={m.history}
+                domain={[dMin, dMax]}
+                tone={sparkTone[m.toneColor]}
+                tail
+                height={20}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
