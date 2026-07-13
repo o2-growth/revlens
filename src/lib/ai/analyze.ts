@@ -11,7 +11,9 @@ export type CallAnalysisResult = {
 
 export type TalkRatio = Record<string, number>;
 
-const ANALYSIS_MODEL = "gemini-2.5-flash";
+// gemini-2.5-flash foi aposentado para contas novas; validado end-to-end com
+// gemini-3.1-flash-lite numa call real (jul/2026). Override via env se preciso.
+const ANALYSIS_MODEL = process.env.GEMINI_ANALYSIS_MODEL || "gemini-3.1-flash-lite";
 
 // Prompt puramente funcional (sem I/O) — testável sem chamar a rede.
 export function buildAnalysisPrompt(transcript: NormalizedTranscript): string {
